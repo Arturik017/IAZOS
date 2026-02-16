@@ -22,3 +22,9 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Laravel runtime (do not version)
+/storage/*.key
+/storage/framework/
+/storage/logs/
+/public/storage/
