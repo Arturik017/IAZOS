@@ -239,7 +239,7 @@
                         </div>
 
                         <div class="mt-4 text-xs text-gray-400">
-                            © {{ date('Y') }} TECHY'S. Toate drepturile rezervate.
+                            © {{ date('Y') }} IAZOS. Toate drepturile rezervate.
                         </div>
                     </footer>
 
