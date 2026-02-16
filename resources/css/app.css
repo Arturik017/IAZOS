@@ -1,5 +1,99 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-[x-cloak] { display: none; }
 
+/* ===== GLOBAL DARK THEME OVERRIDES (auto via darkMode: 'media') ===== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;         /* fundal principal */
+    --surface: #0f172a;    /* suprafețe (navbar, bar-uri) */
+    --card: #111c2e;       /* carduri */
+    --border: #243042;     /* borduri */
+    --text: #e5e7eb;       /* text principal */
+    --muted: #94a3b8;      /* text secundar */
+    --primary: #2563eb;    /* albastru butoane */
+    --primaryHover: #1d4ed8;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* Linkuri */
+  a { color: inherit; }
+
+  /* Navbar / header (Tailwind Breeze folosește bg-white) */
+  nav, header {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+  }
+
+  /* FOARTE IMPORTANT: multe zone la tine sunt bg-gray-50 / bg-gray-100 */
+  .bg-white { background-color: var(--card) !important; }
+  .bg-gray-50 { background-color: var(--card) !important; }
+  .bg-gray-100 { background-color: var(--bg) !important; }
+  .bg-gray-200 { background-color: #0d1627 !important; }
+
+  /* Texte gri închis -> deschis */
+  .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600, .text-gray-500, .text-gray-400 {
+    color: var(--text) !important;
+  }
+  .text-gray-300, .text-gray-200 {
+    color: #cbd5e1 !important;
+  }
+
+  /* Borduri */
+  .border-gray-100, .border-gray-200, .border-gray-300, .border-gray-400 {
+    border-color: var(--border) !important;
+  }
+
+  /* Hover pe fundaluri “light” */
+  .hover\:bg-gray-100:hover,
+  .hover\:bg-gray-50:hover {
+    background-color: #0d1627 !important;
+  }
+
+  /* Inputuri */
+  input, select, textarea {
+    background: #0d1627 !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--muted) !important;
+  }
+
+  /* Dropdown / meniuri Breeze */
+  .dropdown-content, [role="menu"] {
+    background: var(--card) !important;
+    border-color: var(--border) !important;
+  }
+
+  /* BUTOANE: să fie “profi” și vizibile peste tot */
+  button,
+  [type="button"],
+  [type="submit"],
+  a.inline-flex.items-center.justify-center {
+    border-color: var(--border) !important;
+  }
+
+  /* Butoane care sunt “albe” sau “gri” în light mode */
+  .bg-gray-900 { background-color: var(--primary) !important; }
+  .hover\:bg-black:hover { background-color: var(--primaryHover) !important; }
+  .hover\:bg-gray-900:hover { background-color: var(--primaryHover) !important; }
+
+  /* Butoane/linkuri tip dropdown (să nu mai facă hover negru urât) */
+  .hover\:bg-gray-100:hover,
+  .dark\:hover\:bg-gray-800:hover {
+    background-color: #0d1627 !important;
+  }
+
+  /* Umbre mai soft pe dark */
+  .shadow, .shadow-sm, .shadow-md, .shadow-lg {
+    box-shadow: 0 10px 30px rgba(0,0,0,.35) !important;
+  }
+}
+
+[x-cloak] { display: none; }
