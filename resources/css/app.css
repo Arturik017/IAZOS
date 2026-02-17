@@ -2,18 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== GLOBAL DARK THEME OVERRIDES (auto via darkMode: 'media') ===== */
+/* ===== GLOBAL DARK THEME OVERRIDES ===== */
 
 @media (prefers-color-scheme: dark) {
+
   :root {
-    --bg: #0b1220;         /* fundal principal */
-    --surface: #0f172a;    /* suprafețe (navbar, bar-uri) */
-    --card: #111c2e;       /* carduri */
-    --border: #243042;     /* borduri */
-    --text: #e5e7eb;       /* text principal */
-    --muted: #94a3b8;      /* text secundar */
-    --primary: #2563eb;    /* albastru butoane */
+    --bg: #0b1220;
+    --surface: #0f172a;
+    --card: #111c2e;
+    --card2: #0d1627;
+    --border: #243042;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+
+    --primary: #2563eb;
     --primaryHover: #1d4ed8;
+
+    --success: #22c55e;
+    --successHover: #16a34a;
+
+    --ringBlue: rgba(37,99,235,.35);
+    --ringGreen: rgba(34,197,94,.30);
   }
 
   html, body {
@@ -21,79 +30,147 @@
     color: var(--text);
   }
 
-  /* Linkuri */
-  a { color: inherit; }
+  a {
+    color: inherit;
+  }
 
-  /* Navbar / header (Tailwind Breeze folosește bg-white) */
+  /* Navbar / Header */
   nav, header {
     background: var(--surface) !important;
     border-color: var(--border) !important;
   }
 
-  /* FOARTE IMPORTANT: multe zone la tine sunt bg-gray-50 / bg-gray-100 */
+  /* Background overrides */
   .bg-white { background-color: var(--card) !important; }
   .bg-gray-50 { background-color: var(--card) !important; }
   .bg-gray-100 { background-color: var(--bg) !important; }
-  .bg-gray-200 { background-color: #0d1627 !important; }
+  .bg-gray-200 { background-color: var(--card2) !important; }
 
-  /* Texte gri închis -> deschis */
-  .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600, .text-gray-500, .text-gray-400 {
+  /* Text fixes */
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700,
+  .text-gray-600,
+  .text-gray-500,
+  .text-gray-400 {
     color: var(--text) !important;
   }
-  .text-gray-300, .text-gray-200 {
+
+  .text-gray-300,
+  .text-gray-200 {
     color: #cbd5e1 !important;
   }
 
-  /* Borduri */
-  .border-gray-100, .border-gray-200, .border-gray-300, .border-gray-400 {
+  /* Borders */
+  .border-gray-100,
+  .border-gray-200,
+  .border-gray-300,
+  .border-gray-400 {
     border-color: var(--border) !important;
   }
 
-  /* Hover pe fundaluri “light” */
+  /* Hover backgrounds */
   .hover\:bg-gray-100:hover,
   .hover\:bg-gray-50:hover {
-    background-color: #0d1627 !important;
+    background-color: var(--card2) !important;
   }
 
-  /* Inputuri */
+  /* Inputs */
   input, select, textarea {
-    background: #0d1627 !important;
+    background: var(--card2) !important;
     color: var(--text) !important;
     border-color: var(--border) !important;
   }
-  input::placeholder, textarea::placeholder {
+
+  input::placeholder,
+  textarea::placeholder {
     color: var(--muted) !important;
   }
 
-  /* Dropdown / meniuri Breeze */
-  .dropdown-content, [role="menu"] {
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none !important;
+    border-color: rgba(37,99,235,.65) !important;
+    box-shadow: 0 0 0 4px var(--ringBlue) !important;
+  }
+
+  /* Dropdown */
+  .dropdown-content,
+  [role="menu"] {
     background: var(--card) !important;
     border-color: var(--border) !important;
   }
 
-  /* BUTOANE: să fie “profi” și vizibile peste tot */
-  button,
-  [type="button"],
-  [type="submit"],
-  a.inline-flex.items-center.justify-center {
-    border-color: var(--border) !important;
-  }
-
-  /* Butoane care sunt “albe” sau “gri” în light mode */
+  /* Primary buttons */
   .bg-gray-900 { background-color: var(--primary) !important; }
-  .hover\:bg-black:hover { background-color: var(--primaryHover) !important; }
-  .hover\:bg-gray-900:hover { background-color: var(--primaryHover) !important; }
-
-  /* Butoane/linkuri tip dropdown (să nu mai facă hover negru urât) */
-  .hover\:bg-gray-100:hover,
-  .dark\:hover\:bg-gray-800:hover {
-    background-color: #0d1627 !important;
+  .hover\:bg-black:hover,
+  .hover\:bg-gray-900:hover {
+    background-color: var(--primaryHover) !important;
   }
 
-  /* Umbre mai soft pe dark */
-  .shadow, .shadow-sm, .shadow-md, .shadow-lg {
+  /* Shadows */
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg {
     box-shadow: 0 10px 30px rgba(0,0,0,.35) !important;
   }
+
+  /* ==========================================
+   BANNER ARROWS – FĂRĂ MIȘCARE LA HOVER
+   ========================================== */
+
+  .relative button.rounded-full,
+  .relative a.rounded-full {
+    background: rgba(13,22,39,.75) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 10px 28px rgba(0,0,0,.45) !important;
+    transition: background-color .15s ease,
+                box-shadow .15s ease,
+                border-color .15s ease !important;
+  }
+
+  .relative button.rounded-full:hover,
+  .relative a.rounded-full:hover {
+    /* fără transform */
+    background: rgba(37,99,235,.18) !important;
+    border-color: rgba(37,99,235,.65) !important;
+    box-shadow: 0 14px 34px rgba(0,0,0,.55),
+                0 0 0 4px var(--ringBlue) !important;
+  }
+
+  .relative button.rounded-full svg,
+  .relative a.rounded-full svg {
+    color: var(--text) !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+  }
+
+  /* =====================================================
+     PROFILE SAVE BUTTON – verde clar
+     ===================================================== */
+
+  main form button[type="submit"] {
+    background: rgba(34,197,94,.18) !important;
+    border: 1px solid rgba(34,197,94,.45) !important;
+    color: #eafff2 !important;
+    box-shadow: 0 10px 26px rgba(0,0,0,.35) !important;
+    transition: all .15s ease !important;
+  }
+
+  main form button[type="submit"]:hover {
+    background: rgba(34,197,94,.28) !important;
+    border-color: rgba(34,197,94,.70) !important;
+    box-shadow: 0 14px 36px rgba(0,0,0,.50),
+                0 0 0 4px var(--ringGreen) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  main form button[type="submit"]:active {
+    transform: translateY(0) !important;
+  }
+
 }
 
 [x-cloak] { display: none; }
