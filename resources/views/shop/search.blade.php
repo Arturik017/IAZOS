@@ -1,81 +1,103 @@
 <x-app-layout>
-    <div class="py-8">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="grid grid-cols-12 gap-6">
+    <x-slot name="header">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900">
+                    Rezultate căutare
+                </h2>
+                <p class="text-sm text-gray-500">
+                    Căutare pentru: <span class="font-semibold">{{ $q ?: '—' }}</span>
+                </p>
+            </div>
+        </div>
+    </x-slot>
 
-                {{-- Sidebar categorii --}}
-                <aside class="col-span-12 lg:col-span-3">
-                    <div class="lg:sticky lg:top-6">
-                        @include('shop.partials.sidebar')
+    <div class="py-10">
+        <div class="max-w-7xl mx-auto px-4 space-y-8">
+
+            @if(!empty($q))
+                <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Selleri găsiți</h3>
+                            <p class="text-sm text-gray-500">Magazine și selleri care se potrivesc cu căutarea.</p>
+                        </div>
+
+                        <div class="text-sm text-gray-500">
+                            {{ $sellers->count() }} rezultate
+                        </div>
                     </div>
-                </aside>
 
-                {{-- Rezultate --}}
-                <main class="col-span-12 lg:col-span-9">
-                    <div class="bg-white rounded-2xl shadow border border-gray-100 p-5 sm:p-6">
-                        <h1 class="text-xl font-bold text-gray-900">
-                            Rezultate căutare
-                        </h1>
-                        <p class="text-sm text-gray-500 mt-1">
-                            Căutare: <span class="font-semibold text-gray-900">{{ $q ?: '—' }}</span>
-                            • Găsite: <span class="font-semibold text-gray-900">{{ $products->total() }}</span>
-                        </p>
+                    @if($sellers->isEmpty())
+                        <div class="mt-5 text-sm text-gray-500">
+                            Nu au fost găsiți selleri pentru această căutare.
+                        </div>
+                    @else
+                        <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            @foreach($sellers as $seller)
+                                <a href="{{ route('seller.public.show', $seller->id) }}"
+                                   class="block rounded-2xl border border-gray-200 bg-gray-50 p-5 hover:border-blue-300 hover:shadow transition">
+                                    <div class="text-lg font-semibold text-gray-900">
+                                        {{ $seller->sellerProfile->shop_name ?? $seller->name }}
+                                    </div>
+
+                                    @if(!empty($seller->sellerProfile->legal_name))
+                                        <div class="mt-1 text-sm text-gray-600">
+                                            {{ $seller->sellerProfile->legal_name }}
+                                        </div>
+                                    @endif
+
+                                    @if(!empty($seller->sellerProfile->pickup_address))
+                                        <div class="mt-2 text-sm text-gray-500">
+                                            {{ $seller->sellerProfile->pickup_address }}
+                                        </div>
+                                    @endif
+
+                                    @if(!empty($seller->sellerProfile->notes))
+                                        <div class="mt-3 text-sm text-gray-600 line-clamp-3">
+                                            {{ $seller->sellerProfile->notes }}
+                                        </div>
+                                    @endif
+
+                                    <div class="mt-4 text-sm font-semibold text-blue-600">
+                                        Vezi seller →
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Produse găsite</h3>
+                        <p class="text-sm text-gray-500">Produse care se potrivesc cu căutarea ta.</p>
+                    </div>
+
+                    <div class="text-sm text-gray-500">
+                        {{ $products->total() }} rezultate
+                    </div>
+                </div>
+
+                @if($products->isEmpty())
+                    <div class="mt-5 p-10 text-center rounded-xl border border-dashed border-gray-200 text-gray-600">
+                        Nu există produse pentru această căutare.
+                    </div>
+                @else
+                    <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        @foreach($products as $product)
+                            @include('shop.partials.product-card', ['product' => $product])
+                        @endforeach
                     </div>
 
                     <div class="mt-6">
-                        @if($products->isEmpty())
-                            <div class="bg-white p-10 rounded-2xl shadow text-center border border-gray-100">
-                                <div class="text-gray-900 font-semibold">Nu am găsit produse.</div>
-                                <div class="text-gray-500 text-sm mt-1">Încearcă alte cuvinte.</div>
-                            </div>
-                        @else
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                @foreach($products as $product)
-                                    <a href="{{ route('product.show', $product) }}"
-                                       class="block bg-white rounded-2xl shadow border border-gray-100 overflow-hidden hover:shadow-xl transition">
-                                        @if($product->image)
-                                            <img src="{{ asset('storage/'.$product->image) }}"
-                                                 class="h-44 w-full object-cover" alt="{{ $product->name }}">
-                                        @else
-                                            <div class="h-44 bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
-                                                Fără imagine
-                                            </div>
-                                        @endif
-
-                                        <div class="p-5">
-                                            <div class="font-semibold text-gray-900">{{ $product->name }}</div>
-
-                                            <div class="mt-2 flex items-end justify-between">
-                                                <div class="text-xl font-extrabold text-gray-900">
-                                                    {{ number_format($product->final_price, 2) }} MDL
-                                                </div>
-                                                <div class="text-sm text-gray-500">
-                                                    Stoc: <span class="font-semibold text-gray-900">{{ $product->stock }}</span>
-                                                </div>
-                                            </div>
-
-                                            <div class="mt-4">
-                                                <form method="POST" action="{{ route('cart.add', $product) }}">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="w-full px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition">
-                                                        Adaugă în coș
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </a>
-                                @endforeach
-                            </div>
-
-                            <div class="mt-6">
-                                {{ $products->links() }}
-                            </div>
-                        @endif
+                        {{ $products->links() }}
                     </div>
-                </main>
-
+                @endif
             </div>
+
         </div>
     </div>
 </x-app-layout>

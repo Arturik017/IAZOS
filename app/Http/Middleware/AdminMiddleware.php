@@ -13,7 +13,9 @@ class AdminMiddleware
             return redirect()->route('login');
         }
 
-        if (auth()->user()->role !== 'admin') {
+        $user = auth()->user();
+
+        if (($user->role ?? null) !== 'admin' && (int)($user->is_admin ?? 0) !== 1) {
             abort(403, 'Acces interzis.');
         }
 

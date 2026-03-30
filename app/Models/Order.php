@@ -3,21 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
     protected $fillable = [
         'pay_id',
         'payment_status',
-
-        // ✅ adăugate (altfel nu se salvează)
         'payment_details',
         'paid_at',
         'paid_email_sent_at',
         'refund_status',
         'refunded_at',
-
         'user_id',
         'first_name',
         'last_name',
@@ -41,14 +39,13 @@ class Order extends Model
         'refunded_at' => 'datetime',
     ];
 
-    // ✅ Relația cu utilizatorul (pentru $order->user->email)
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function items()
+    public function items(): HasMany
     {
-        return $this->hasMany(\App\Models\OrderItem::class);
+        return $this->hasMany(OrderItem::class);
     }
 }

@@ -14,8 +14,11 @@
                     'new' => 'Noi',
                     'confirmed' => 'Confirmate',
                     'processing' => 'În procesare',
+                    'partial_shipped' => 'Parțial expediate',
                     'shipped' => 'Expediate',
+                    'completed' => 'Finalizate',
                     'delivered' => 'Livrate',
+                    'cancelled' => 'Anulate',
                     'canceled' => 'Anulate',
                     'unknown' => 'Altele',
                 ];
@@ -24,8 +27,11 @@
                     'new' => 'bg-yellow-100 text-yellow-800',
                     'confirmed' => 'bg-blue-100 text-blue-800',
                     'processing' => 'bg-indigo-100 text-indigo-800',
+                    'partial_shipped' => 'bg-fuchsia-100 text-fuchsia-800',
                     'shipped' => 'bg-purple-100 text-purple-800',
+                    'completed' => 'bg-emerald-100 text-emerald-800',
                     'delivered' => 'bg-green-100 text-green-800',
+                    'cancelled' => 'bg-red-100 text-red-800',
                     'canceled' => 'bg-red-100 text-red-800',
                     'unknown' => 'bg-gray-100 text-gray-800',
                 ];
@@ -84,12 +90,18 @@
 
                                     $txId = data_get($pd, 'result.payId', $order->pay_id);
                                     $isPaid = ($payStatus === 'paid');
+
+                                    $sellerNames = $order->items
+                                        ->map(fn ($item) => $item->seller?->sellerProfile?->shop_name ?? $item->seller?->name)
+                                        ->filter()
+                                        ->unique()
+                                        ->values();
                                 @endphp
 
                                 <div class="rounded-2xl border border-gray-100 p-5 hover:border-gray-200 transition">
                                     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
 
-                                        <div class="min-w-0">
+                                        <div class="min-w-0 flex-1">
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <div class="font-semibold text-gray-900">
                                                     Comanda #{{ $order->order_number ?? $order->id }}
@@ -114,32 +126,34 @@
 
                                             @if($txId)
                                                 <div class="mt-2 text-xs text-gray-500">
-                                                    ID tranzacție: <span class="font-mono break-all text-gray-700">{{ $txId }}</span>
+                                                    ID tranzacție:
+                                                    <span class="font-mono break-all text-gray-700">{{ $txId }}</span>
                                                 </div>
                                             @endif
 
-                                            <div class="mt-4 text-sm text-gray-700">
-                                                <div class="font-semibold text-gray-900 mb-2">Produse</div>
-                                                <div class="space-y-1">
-                                                    @foreach($order->items->take(3) as $it)
-                                                        <div class="flex justify-between">
-                                                            <div class="truncate pr-4">
-                                                                {{ $it->product_name }}
-                                                                <span class="text-gray-400">× {{ $it->qty }}</span>
-                                                            </div>
-                                                            <div class="font-semibold whitespace-nowrap">
-                                                                {{ number_format($it->price * $it->qty, 2) }} MDL
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
+                                            <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                                                    <div class="text-xs uppercase tracking-wide text-gray-500">Produse</div>
+                                                    <div class="mt-1 text-lg font-bold text-gray-900">{{ $order->items_count ?? $order->items->count() }}</div>
+                                                </div>
 
-                                                    @if($order->items->count() > 3)
-                                                        <div class="text-gray-400 text-xs">
-                                                            + încă {{ $order->items->count() - 3 }} produse…
-                                                        </div>
-                                                    @endif
+                                                <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                                                    <div class="text-xs uppercase tracking-wide text-gray-500">Selleri</div>
+                                                    <div class="mt-1 text-lg font-bold text-gray-900">{{ $order->sellers_count ?? $order->items->pluck('seller_id')->filter()->unique()->count() }}</div>
+                                                </div>
+
+                                                <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                                                    <div class="text-xs uppercase tracking-wide text-gray-500">Total</div>
+                                                    <div class="mt-1 text-lg font-bold text-gray-900">{{ number_format($order->subtotal, 2) }} MDL</div>
                                                 </div>
                                             </div>
+
+                                            @if($sellerNames->isNotEmpty())
+                                                <div class="mt-4 text-sm text-gray-600">
+                                                    <span class="font-semibold text-gray-900">Selleri:</span>
+                                                    {{ $sellerNames->join(', ') }}
+                                                </div>
+                                            @endif
 
                                             @if(!empty($order->customer_note))
                                                 <div class="mt-4 text-sm text-gray-600">
@@ -150,15 +164,16 @@
                                         </div>
 
                                         <div class="flex flex-col items-start lg:items-end gap-3">
-                                            <div class="text-lg font-extrabold text-gray-900">
-                                                {{ number_format($order->subtotal, 2) }} MDL
-                                            </div>
+                                            <a href="{{ route('orders.show', $order) }}"
+                                               class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gray-900 text-white text-base font-semibold hover:bg-black">
+                                                Vezi comanda
+                                                <span aria-hidden="true">→</span>
+                                            </a>
 
                                             @if(!empty($order->pay_id))
                                                 <a href="{{ route('pay.maib.receipt', ['payId' => $order->pay_id]) }}"
-                                                   class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gray-900 text-white text-base font-semibold hover:bg-black">
+                                                   class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-gray-200 bg-white text-base font-semibold text-gray-900 hover:bg-gray-50">
                                                     Detalii plată
-                                                    <span aria-hidden="true">→</span>
                                                 </a>
                                             @endif
                                         </div>

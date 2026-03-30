@@ -144,11 +144,14 @@ class CheckoutController extends Controller
                     $product = $productId ? Product::find($productId) : null;
 
                     OrderItem::create([
-                        'order_id'     => $order->id,
-                        'product_id'   => $product?->id,
-                        'product_name' => (string)($item['name'] ?? ''),
-                        'price'        => (float)($item['price'] ?? 0),
-                        'qty'          => (int)($item['qty'] ?? 0),
+                        'order_id'                 => $order->id,
+                        'product_id'               => $product?->id,
+                        'seller_id'                => $product?->seller_id,
+                        'seller_status'            => 'pending',
+                        'seller_status_updated_at' => now(),
+                        'product_name'             => (string)($item['name'] ?? ''),
+                        'price'                    => (float)($item['price'] ?? 0),
+                        'qty'                      => (int)($item['qty'] ?? 0),
                     ]);
                 }
 

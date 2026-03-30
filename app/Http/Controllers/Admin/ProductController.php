@@ -10,10 +10,69 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::orderByDesc('id')->get();
-        return view('admin.products.index', compact('products'));
+        $q = trim((string) $request->query('q', ''));
+        $owner = (string) $request->query('owner', '');
+        $moderation = (string) $request->query('moderation', '');
+        $status = (string) $request->query('status', '');
+
+        $products = Product::query()
+            ->with(['seller.sellerProfile', 'category'])
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($qq) use ($q) {
+                    $qq->where('name', 'like', "%{$q}%")
+                        ->orWhere('description', 'like', "%{$q}%")
+                        ->orWhereHas('seller', function ($sellerQuery) use ($q) {
+                            $sellerQuery->where('name', 'like', "%{$q}%")
+                                ->orWhere('email', 'like', "%{$q}%")
+                                ->orWhereHas('sellerProfile', function ($profileQuery) use ($q) {
+                                    $profileQuery->where('shop_name', 'like', "%{$q}%")
+                                        ->orWhere('legal_name', 'like', "%{$q}%");
+                                });
+                        });
+                });
+            })
+            ->when($owner === 'admin', function ($query) {
+                $query->whereNull('seller_id');
+            })
+            ->when($owner === 'seller', function ($query) {
+                $query->whereNotNull('seller_id');
+            })
+            ->when($moderation === 'pending', function ($query) {
+                $query->whereNotNull('seller_id')->where('is_approved', false);
+            })
+            ->when($moderation === 'approved', function ($query) {
+                $query->where(function ($qq) {
+                    $qq->whereNull('seller_id')
+                        ->orWhere('is_approved', true);
+                });
+            })
+            ->when($status === 'active', function ($query) {
+                $query->where('status', 1);
+            })
+            ->when($status === 'inactive', function ($query) {
+                $query->where('status', 0);
+            })
+            ->orderByDesc('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        $stats = [
+            'total' => Product::count(),
+            'pending' => Product::whereNotNull('seller_id')->where('is_approved', false)->count(),
+            'approved_seller_products' => Product::whereNotNull('seller_id')->where('is_approved', true)->count(),
+            'admin_products' => Product::whereNull('seller_id')->count(),
+        ];
+
+        return view('admin.products.index', compact(
+            'products',
+            'q',
+            'owner',
+            'moderation',
+            'status',
+            'stats'
+        ));
     }
 
     public function create()
@@ -25,32 +84,37 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'final_price' => ['required', 'numeric', 'min:0'],
-            'stock'       => ['required', 'integer', 'min:0'],
-            'status'      => ['nullable'],
-            'image'       => ['nullable', 'image', 'max:4096'],
-            'category_id' => ['nullable','exists:categories,id'],
-            'subcategory_id' => ['nullable','exists:categories,id'],
-            'is_promo' => ['nullable'],
+            'name'           => ['required', 'string', 'max:255'],
+            'description'    => ['nullable', 'string'],
+            'final_price'    => ['required', 'numeric', 'min:0'],
+            'stock'          => ['required', 'integer', 'min:0'],
+            'status'         => ['nullable'],
+            'image'          => ['nullable', 'image', 'max:4096'],
+            'category_id'    => ['nullable', 'exists:categories,id'],
+            'subcategory_id' => ['nullable', 'exists:categories,id'],
+            'is_promo'       => ['nullable'],
         ]);
 
         $imagePath = null;
+
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('products', 'public');
         }
 
         Product::create([
-            'name'        => $request->name,
-            'description' => $request->description,
-            'final_price' => $request->final_price,
-            'stock'       => $request->stock,
-            'status'      => $request->has('status') ? 1 : 0,
-            'image'       => $imagePath,
-            'category_id' => $request->category_id,
-            'subcategory_id' => $request->subcategory_id,
-            'is_promo' => $request->has('is_promo') ? 1 : 0,
+            'name'              => $request->name,
+            'description'       => $request->description,
+            'final_price'       => $request->final_price,
+            'stock'             => $request->stock,
+            'status'            => $request->has('status') ? 1 : 0,
+            'image'             => $imagePath,
+            'category_id'       => $request->category_id,
+            'subcategory_id'    => $request->subcategory_id,
+            'is_promo'          => $request->has('is_promo') ? 1 : 0,
+            'seller_id'         => null,
+            'shipping_included' => true,
+            'is_approved'       => true,
+            'proof_path'        => null,
         ]);
 
         return redirect()->route('admin.products.index')->with('success', 'Produs adăugat');
@@ -67,15 +131,15 @@ class ProductController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'final_price' => ['required', 'numeric', 'min:0'],
-            'stock'       => ['required', 'integer', 'min:0'],
-            'status'      => ['nullable'],
-            'image'       => ['nullable', 'image', 'max:4096'],
-            'category_id' => ['nullable','exists:categories,id'],
-            'subcategory_id' => ['nullable','exists:categories,id'],
-            'is_promo'    => ['nullable'],
+            'name'           => ['required', 'string', 'max:255'],
+            'description'    => ['nullable', 'string'],
+            'final_price'    => ['required', 'numeric', 'min:0'],
+            'stock'          => ['required', 'integer', 'min:0'],
+            'status'         => ['nullable'],
+            'image'          => ['nullable', 'image', 'max:4096'],
+            'category_id'    => ['nullable', 'exists:categories,id'],
+            'subcategory_id' => ['nullable', 'exists:categories,id'],
+            'is_promo'       => ['nullable'],
         ]);
 
         $product = Product::findOrFail($id);
@@ -84,6 +148,7 @@ class ProductController extends Controller
             if (!empty($product->image)) {
                 Storage::disk('public')->delete($product->image);
             }
+
             $product->image = $request->file('image')->store('products', 'public');
         }
 
@@ -96,9 +161,24 @@ class ProductController extends Controller
         $product->subcategory_id = $request->subcategory_id;
         $product->is_promo = $request->has('is_promo') ? 1 : 0;
 
+        if (is_null($product->seller_id)) {
+            $product->shipping_included = true;
+            $product->is_approved = true;
+        }
+
         $product->save();
 
         return redirect()->route('admin.products.index')->with('success', 'Produs actualizat');
+    }
+
+    public function approve($id)
+    {
+        $product = Product::findOrFail($id);
+
+        $product->is_approved = true;
+        $product->save();
+
+        return redirect()->route('admin.products.index')->with('success', 'Produs aprobat.');
     }
 
     public function destroy($id)

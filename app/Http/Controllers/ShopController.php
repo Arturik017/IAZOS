@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Banner;
+use App\Models\User;
+use App\Models\OrderItem;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Illuminate\Support\Facades\Storage;
-
+use Illuminate\Support\Facades\Storage;
 
 class ShopController extends Controller
 {
@@ -27,8 +28,16 @@ class ShopController extends Controller
             ];
         })->values();
 
-        $promoProducts = Product::where('status', 1)
+        $promoProducts = Product::query()
+            ->with(['seller.sellerProfile'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->where('status', 1)
             ->where('is_promo', 1)
+            ->where(function ($q) {
+                $q->whereNull('seller_id')
+                    ->orWhere('is_approved', true);
+            })
             ->orderByDesc('id')
             ->get();
 
@@ -42,8 +51,26 @@ class ShopController extends Controller
             ->orderBy('name')
             ->get();
 
-        $query = Product::where('status', 1)
-            ->where('id', '!=', $product->id);
+        $product->load([
+            'seller.sellerProfile',
+            'category',
+            'subcategory',
+            'reviews.user',
+            'reviews.images',
+            'questions.user',
+            'questions.answeredBy',
+        ]);
+
+        $query = Product::query()
+            ->with(['seller.sellerProfile'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->where('status', 1)
+            ->where('id', '!=', $product->id)
+            ->where(function ($q) {
+                $q->whereNull('seller_id')
+                    ->orWhere('is_approved', true);
+            });
 
         if (!empty($product->subcategory_id)) {
             $query->where('subcategory_id', $product->subcategory_id);
@@ -55,91 +82,131 @@ class ShopController extends Controller
 
         $similarProducts = $query->orderByDesc('id')->limit(6)->get();
 
-        return view('shop.product', compact('categories', 'product', 'similarProducts'));
+        $reviews = $product->reviews()
+            ->with(['user', 'images'])
+            ->latest()
+            ->get();
+
+        $questions = $product->questions()
+            ->with(['user', 'answeredBy'])
+            ->latest()
+            ->get();
+
+        $canReview = false;
+        $myReview = null;
+
+        if (auth()->check()) {
+            $canReview = OrderItem::query()
+                ->where('product_id', $product->id)
+                ->whereHas('order', function ($q) {
+                    $q->where('user_id', auth()->id())
+                        ->where('payment_status', 'paid');
+                })
+                ->exists();
+
+            $myReview = $reviews->firstWhere('user_id', auth()->id());
+        }
+
+        return view('shop.product', compact(
+            'categories',
+            'product',
+            'similarProducts',
+            'reviews',
+            'questions',
+            'canReview',
+            'myReview'
+        ));
     }
 
     public function category(Request $request, Category $category)
-{
-    $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
+    {
+        $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
 
-    $q = Product::query()
-        ->where('status', 1)
-        ->where('category_id', $category->id);
+        $q = Product::query()
+            ->with(['seller.sellerProfile'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->where('status', 1)
+            ->where('category_id', $category->id)
+            ->where(function ($q) {
+                $q->whereNull('seller_id')
+                    ->orWhere('is_approved', true);
+            });
 
-    // ✅ promo
-    if ($request->boolean('promo')) {
-        $q->where('is_promo', 1);
+        if ($request->boolean('promo')) {
+            $q->where('is_promo', 1);
+        }
+
+        if ($request->boolean('in_stock')) {
+            $q->where('stock', '>', 0);
+        }
+
+        if ($request->filled('min_price')) {
+            $q->where('final_price', '>=', (float) $request->min_price);
+        }
+
+        if ($request->filled('max_price')) {
+            $q->where('final_price', '<=', (float) $request->max_price);
+        }
+
+        $sort = $request->get('sort', 'new');
+
+        if ($sort === 'price_asc') {
+            $q->orderBy('final_price', 'asc');
+        } elseif ($sort === 'price_desc') {
+            $q->orderBy('final_price', 'desc');
+        } else {
+            $q->orderByDesc('id');
+        }
+
+        $products = $q->paginate(24)->withQueryString();
+
+        return view('shop.category', compact('categories', 'category', 'products'));
     }
-
-    // ✅ în stoc
-    if ($request->boolean('in_stock')) {
-        $q->where('stock', '>', 0);
-    }
-
-    // ✅ preț
-    if ($request->filled('min_price')) {
-        $q->where('final_price', '>=', (float)$request->min_price);
-    }
-    if ($request->filled('max_price')) {
-        $q->where('final_price', '<=', (float)$request->max_price);
-    }
-
-    // ✅ sort
-    $sort = $request->get('sort', 'new');
-    if ($sort === 'price_asc') {
-        $q->orderBy('final_price', 'asc');
-    } elseif ($sort === 'price_desc') {
-        $q->orderBy('final_price', 'desc');
-    } else {
-        $q->orderByDesc('id'); // new
-    }
-
-    $products = $q->paginate(24)->withQueryString();
-
-
-    return view('shop.category', compact('categories', 'category', 'products'));
-}
 
     public function subcategory(Request $request, Category $category)
     {
         $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
 
         $q = Product::query()
+            ->with(['seller.sellerProfile'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->where('status', 1)
-            ->where('subcategory_id', $category->id);
+            ->where('subcategory_id', $category->id)
+            ->where(function ($q) {
+                $q->whereNull('seller_id')
+                    ->orWhere('is_approved', true);
+            });
 
-        // ✅ promo
         if ($request->boolean('promo')) {
             $q->where('is_promo', 1);
         }
 
-        // ✅ în stoc
         if ($request->boolean('in_stock')) {
             $q->where('stock', '>', 0);
         }
 
-        // ✅ preț
         if ($request->filled('min_price')) {
-            $q->where('final_price', '>=', (float)$request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $q->where('final_price', '<=', (float)$request->max_price);
+            $q->where('final_price', '>=', (float) $request->min_price);
         }
 
-        // ✅ sort
+        if ($request->filled('max_price')) {
+            $q->where('final_price', '<=', (float) $request->max_price);
+        }
+
         $sort = $request->get('sort', 'new');
+
         if ($sort === 'price_asc') {
             $q->orderBy('final_price', 'asc');
         } elseif ($sort === 'price_desc') {
             $q->orderBy('final_price', 'desc');
         } else {
-            $q->orderByDesc('id'); // new
+            $q->orderByDesc('id');
         }
 
         $products = $q->paginate(24)->withQueryString();
 
-
-        // subcategoria folosește aceeași pagină `shop.category`
         return view('shop.category', compact('categories', 'category', 'products'));
     }
 
@@ -153,20 +220,46 @@ class ShopController extends Controller
             ->get();
 
         $products = Product::query()
+            ->with(['seller.sellerProfile'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->where('status', 1)
+            ->where(function ($q) {
+                $q->whereNull('seller_id')
+                    ->orWhere('is_approved', true);
+            })
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($qq) use ($q) {
                     $qq->where('name', 'like', "%{$q}%")
-                    ->orWhere('description', 'like', "%{$q}%");
+                        ->orWhere('description', 'like', "%{$q}%");
                 });
             })
             ->orderByDesc('id')
             ->paginate(24)
             ->withQueryString();
 
-        return view('shop.search', compact('categories', 'products', 'q'));
-    }
+        $sellers = collect();
 
+        if ($q !== '') {
+            $sellers = User::query()
+                ->where('role', 'seller')
+                ->where('seller_status', 'approved')
+                ->whereHas('sellerProfile', function ($query) use ($q) {
+                    $query->where('shop_name', 'like', "%{$q}%")
+                        ->orWhere('legal_name', 'like', "%{$q}%")
+                        ->orWhere('notes', 'like', "%{$q}%")
+                        ->orWhere('pickup_address', 'like', "%{$q}%");
+                })
+                ->with('sellerProfile')
+                ->withAvg('sellerReviewsReceived', 'rating')
+                ->withCount('sellerReviewsReceived')
+                ->orderByDesc('id')
+                ->limit(12)
+                ->get();
+        }
+
+        return view('shop.search', compact('categories', 'products', 'q', 'sellers'));
+    }
 
     public function create()
     {
@@ -181,11 +274,13 @@ class ShopController extends Controller
         }
 
         $subtotal = 0;
-        foreach ($cart as $item) $subtotal += ($item['price'] * $item['qty']);
+        foreach ($cart as $item) {
+            $subtotal += ($item['price'] * $item['qty']);
+        }
 
-        // ✅ load locations.json
         $districts = [];
         $localitiesMap = [];
+
         if (Storage::exists('md/locations.json')) {
             $locations = json_decode(Storage::get('md/locations.json'), true);
             $districts = $locations['districts'] ?? [];
@@ -194,6 +289,4 @@ class ShopController extends Controller
 
         return view('shop.checkout', compact('cart', 'subtotal', 'districts', 'localitiesMap'));
     }
-
-
 }

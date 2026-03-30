@@ -128,6 +128,31 @@
                     </div>
                 </div>
 
+                <div class="bg-white rounded-2xl shadow p-6 border">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Cereri seller</p>
+                            <h3 class="text-3xl font-bold text-gray-900 mt-2">
+                                {{ \App\Models\SellerApplication::where('status', 'pending')->count() }}
+                            </h3>
+                            <p class="text-sm text-gray-600 mt-2">
+                                Cereri noi care așteaptă aprobare.
+                            </p>
+                        </div>
+
+                        <div class="w-12 h-12 rounded-2xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-xl font-bold">
+                            S
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <a href="{{ route('admin.seller_applications.index') }}"
+                           class="inline-flex items-center justify-center w-full px-4 py-3 bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600 transition">
+                            Vezi cererile
+                        </a>
+                    </div>
+                </div>
+
 
             </div>
 
