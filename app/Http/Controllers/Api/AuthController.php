@@ -23,7 +23,7 @@ class AuthController extends Controller
             'email' => strtolower($data['email']),
             'password' => $data['password'],
             'role' => 'user',
-            'seller_status' => 'pending',
+            'seller_status' => null,
         ]);
 
         $token = $user->createToken('mobile-app')->plainTextToken;
@@ -78,6 +78,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'seller_status' => $user->seller_status,
         ];
     }
 }
