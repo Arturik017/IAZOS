@@ -70,7 +70,7 @@ class OrderController extends Controller
 
         $commissionPercent = (float) ($user->sellerProfile->commission_percent ?? 10);
 
-        $order = Order::with(['items'])
+        $order = Order::with(['items.refundRequest.user', 'items.refundRequest.reviewer'])
             ->where('id', $id)
             ->whereHas('items', function ($q) use ($user) {
                 $q->where('seller_id', $user->id);
@@ -86,14 +86,7 @@ class OrderController extends Controller
         $myCommission = $myGrossTotal * ($commissionPercent / 100);
         $myNetTotal = $myGrossTotal - $myCommission;
 
-        $allowedStatuses = [
-            'pending',
-            'accepted',
-            'processing',
-            'shipped',
-            'delivered',
-            'cancelled',
-        ];
+        $allowedStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered_pending_review', 'cancelled'];
 
         return view('seller.orders.show', compact(
             'order',
@@ -119,7 +112,7 @@ class OrderController extends Controller
         }
 
         $data = $request->validate([
-            'seller_status' => ['required', 'in:pending,accepted,processing,shipped,delivered,cancelled'],
+            'seller_status' => ['required', 'in:pending,confirmed,processing,shipped,delivered_pending_review,cancelled'],
         ]);
 
         $order = Order::with('items')->findOrFail($orderId);
@@ -156,19 +149,19 @@ class OrderController extends Controller
             return;
         }
 
-        if ($statuses->every(fn ($status) => $status === 'delivered')) {
-            $order->status = 'completed';
+        if ($statuses->every(fn ($status) => in_array($status, ['delivered_pending_review', 'delivered'], true))) {
+            $order->status = 'delivered_pending_review';
             $order->save();
             return;
         }
 
-        if ($statuses->contains('shipped') || $statuses->contains('delivered')) {
+        if ($statuses->contains('shipped') || $statuses->contains('delivered_pending_review') || $statuses->contains('delivered')) {
             $order->status = 'partial_shipped';
             $order->save();
             return;
         }
 
-        if ($statuses->contains('accepted') || $statuses->contains('processing')) {
+        if ($statuses->contains('confirmed') || $statuses->contains('processing')) {
             $order->status = 'processing';
             $order->save();
             return;

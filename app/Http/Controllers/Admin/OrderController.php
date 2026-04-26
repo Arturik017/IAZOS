@@ -23,7 +23,17 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load('items');
+        $order->load([
+            'items.seller.sellerProfile',
+            'items.product',
+            'items.variant',
+            'items.adminReleasedBy',
+            'items.refundedBy',
+            'items.refundRequest.user',
+            'items.refundRequest.seller',
+            'items.refundRequest.reviewer',
+        ]);
+
         return view('admin.orders.show', compact('order'));
     }
 

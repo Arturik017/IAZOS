@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\SellerStory;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -43,6 +44,42 @@ class SellerPublicController extends Controller
             ->paginate(18)
             ->withQueryString();
 
+        $activeStoryIdsBySeller = collect();
+        if (User::supportsSellerStories()) {
+            $sellerIds = $sellers->getCollection()->pluck('id');
+            $sellers->getCollection()->loadCount([
+                'stories as active_stories_count' => fn ($query) => $query->active(),
+            ]);
+
+            $activeStoryIdsBySeller = SellerStory::query()
+                ->whereIn('seller_id', $sellerIds)
+                ->active()
+                ->orderByDesc('created_at')
+                ->get(['id', 'seller_id'])
+                ->groupBy('seller_id')
+                ->map(fn ($items) => $items->pluck('id')->values()->all());
+        }
+
+        if (User::supportsSellerFollowers()) {
+            $sellers->getCollection()->loadCount('followers');
+
+            if (auth()->check()) {
+                $authUser = auth()->user();
+
+                $sellers->getCollection()->transform(function (User $seller) use ($authUser) {
+                    $seller->is_following = $authUser->id !== $seller->id
+                        && $authUser->isFollowingSeller((int) $seller->id);
+
+                    return $seller;
+                });
+            }
+        }
+
+        $sellers->getCollection()->transform(function (User $seller) use ($activeStoryIdsBySeller) {
+            $seller->active_story_ids = $activeStoryIdsBySeller->get($seller->id, []);
+            return $seller;
+        });
+
         return view('shop.sellers', compact('sellers', 'q'));
     }
 
@@ -56,6 +93,9 @@ class SellerPublicController extends Controller
             'sellerProfile',
             'sellerReviewsReceived.user',
         ]);
+        if (User::supportsSellerFollowers()) {
+            $user->loadCount('followers');
+        }
 
         $sellerProfile = $user->sellerProfile;
 
@@ -118,9 +158,55 @@ class SellerPublicController extends Controller
             ->with('user')
             ->latest()
             ->get();
+        $sellerStories = User::supportsSellerStories()
+            ? (User::supportsSellerStoryLikes()
+                ? SellerStory::query()->withCount('likes')
+                : SellerStory::query())
+                ->where('seller_id', $user->id)
+                ->active()
+                ->latest()
+                ->get()
+            : collect();
+        $storyGroups = User::supportsSellerStories()
+            ? (User::supportsSellerStoryLikes()
+                ? SellerStory::query()->with(['seller.sellerProfile'])->withCount('likes')
+                : SellerStory::query()->with(['seller.sellerProfile']))
+                ->active()
+                ->latest()
+                ->get()
+                ->groupBy('seller_id')
+                ->map(function ($items) {
+                    $seller = $items->first()->seller;
+
+                    return [
+                        'seller_id' => $seller->id,
+                        'seller_name' => $seller->sellerProfile->shop_name ?? $seller->name,
+                        'seller_avatar' => \App\Support\MediaUrl::public($seller->sellerProfile->avatar_path ?? null),
+                        'seller_url' => route('seller.public.show', $seller),
+                        'stories' => $items->map(function (SellerStory $story) {
+                            $viewer = auth()->user();
+                            return [
+                                'id' => $story->id,
+                                'media_type' => $story->media_type,
+                                'media_url' => \App\Support\MediaUrl::public($story->media_path),
+                                'thumbnail_url' => \App\Support\MediaUrl::public($story->thumbnail_path ?: $story->media_path),
+                                'caption' => $story->caption,
+                                'expires_at' => $story->expires_at?->format('d.m H:i'),
+                                'likes_count' => (int) ($story->likes_count ?? 0),
+                                'is_liked' => $viewer && User::supportsSellerStoryLikes()
+                                    ? $story->likes()->where('user_id', $viewer->id)->exists()
+                                    : false,
+                            ];
+                        })->values()->all(),
+                    ];
+                })
+                ->sortByDesc(fn (array $group) => (int) ($group['seller_id'] === $user->id))
+                ->values()
+            : collect();
 
         $canReviewSeller = false;
         $mySellerReview = null;
+        $isFollowingSeller = false;
 
         if (auth()->check()) {
             $canReviewSeller = OrderItem::query()
@@ -132,6 +218,9 @@ class SellerPublicController extends Controller
                 ->exists();
 
             $mySellerReview = $sellerReviews->firstWhere('user_id', auth()->id());
+            $isFollowingSeller = auth()->id() !== $user->id
+                && User::supportsSellerFollowers()
+                && auth()->user()->isFollowingSeller((int) $user->id);
         }
 
         return view('shop.seller', compact(
@@ -142,8 +231,11 @@ class SellerPublicController extends Controller
             'q',
             'sort',
             'sellerReviews',
+            'sellerStories',
+            'storyGroups',
             'canReviewSeller',
-            'mySellerReview'
+            'mySellerReview',
+            'isFollowingSeller'
         ));
     }
 }

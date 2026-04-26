@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Support\ImageStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -98,7 +99,7 @@ class ProductController extends Controller
         $imagePath = null;
 
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('products', 'public');
+            $imagePath = ImageStorage::storeWebp($request->file('image'), 'products', 'public', 82, 'image');
         }
 
         Product::create([
@@ -149,7 +150,7 @@ class ProductController extends Controller
                 Storage::disk('public')->delete($product->image);
             }
 
-            $product->image = $request->file('image')->store('products', 'public');
+            $product->image = ImageStorage::storeWebp($request->file('image'), 'products', 'public', 82, 'image');
         }
 
         $product->name = $request->name;

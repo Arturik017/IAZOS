@@ -49,6 +49,12 @@ return [
         'image_model' => env('OPENAI_IMAGE_MODEL', 'gpt-image-1.5'),
     ],
 
+    'marketplace_commissions' => [
+        'beneficiary_name' => env('MARKETPLACE_COMMISSION_BENEFICIARY', 'IAZOS Marketplace SRL'),
+        'iban' => env('MARKETPLACE_COMMISSION_IBAN', 'TODO-SET-IBAN'),
+        'bank_name' => env('MARKETPLACE_COMMISSION_BANK', 'TODO-SET-BANK'),
+    ],
+
 
 
 ];

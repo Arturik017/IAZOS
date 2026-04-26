@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
@@ -13,7 +14,7 @@ class CartController extends Controller
 
         $subtotal = 0;
         foreach ($cart as $item) {
-            $subtotal += ($item['price'] * $item['qty']);
+            $subtotal += ((float) ($item['price'] ?? 0) * (int) ($item['qty'] ?? 0));
         }
 
         return view('shop.cart', [
@@ -22,68 +23,89 @@ class CartController extends Controller
         ]);
     }
 
-    public function add(Product $product)
+    public function add(Request $request, Product $product)
     {
-        // doar produse active
-        if ((int)$product->status !== 1) {
-            return redirect()->route('home')->with('error', 'Produsul nu este disponibil.');
-        }
-
-        $cart = session()->get('cart', []);
-
-        $id = (string)$product->id;
-
-        if (isset($cart[$id])) {
-            // crește cantitatea, dar nu mai mult decât stocul
-            $newQty = $cart[$id]['qty'] + 1;
-            $cart[$id]['qty'] = min($newQty, (int)$product->stock);
-        } else {
-            $cart[$id] = [
-                'id' => $product->id,
-                'name' => $product->name,
-                'price' => (float)$product->final_price,
-                'qty' => 1,
-                'stock' => (int)$product->stock,
-            ];
-        }
-
-        session()->put('cart', $cart);
-
-        return back()->with('success', 'Produs adăugat în coș.');
-
+        return $this->storeCartItem($request, $product, false);
     }
 
-    public function update(Request $request, Product $product)
+    public function buyNow(Request $request, Product $product)
+    {
+        return $this->storeCartItem($request, $product, true);
+    }
+
+    public function update(Request $request, string $rowId)
     {
         $request->validate([
             'qty' => ['required', 'integer', 'min:1'],
         ]);
 
         $cart = session()->get('cart', []);
-        $id = (string)$product->id;
 
-        if (!isset($cart[$id])) {
-            return redirect()->route('cart.index');
+        if (!isset($cart[$rowId])) {
+            return redirect()->route('cart.index')->with('error', 'Produsul nu mai există în coș.');
         }
 
-        $qty = (int)$request->input('qty');
-        $qty = min($qty, (int)$product->stock);
+        $item = $cart[$rowId];
+        $product = Product::find($item['product_id'] ?? $item['id'] ?? null);
 
-        $cart[$id]['qty'] = $qty;
-        $cart[$id]['stock'] = (int)$product->stock;
-        $cart[$id]['price'] = (float)$product->final_price;
+        if (!$product || (int) $product->status !== 1) {
+            unset($cart[$rowId]);
+            session()->put('cart', $cart);
+
+            return redirect()->route('cart.index')->with('error', 'Produsul nu mai este disponibil.');
+        }
+
+        $variant = null;
+        if (!empty($item['variant_id'])) {
+            $variant = ProductVariant::query()
+                ->with(['attributes.attribute', 'attributes.option'])
+                ->where('product_id', $product->id)
+                ->where('id', $item['variant_id'])
+                ->where('is_active', true)
+                ->first();
+
+            if (!$variant) {
+                unset($cart[$rowId]);
+                session()->put('cart', $cart);
+
+                return redirect()->route('cart.index')->with('error', 'Varianta selectată nu mai este disponibilă.');
+            }
+        }
+
+        $stock = $variant ? (int) $variant->stock : (int) $product->stock;
+        $price = $variant && !is_null($variant->price)
+            ? (float) $variant->price
+            : (float) $product->final_price;
+
+        if ($stock <= 0) {
+            unset($cart[$rowId]);
+            session()->put('cart', $cart);
+
+            return redirect()->route('cart.index')->with('error', 'Produsul sau varianta selectată nu mai este în stoc.');
+        }
+
+        $qty = min((int) $request->input('qty'), $stock);
+
+        $cart[$rowId]['qty'] = $qty;
+        $cart[$rowId]['stock'] = $stock;
+        $cart[$rowId]['price'] = $price;
+        $cart[$rowId]['image'] = $variant && $variant->image
+            ? $variant->image
+            : ($product->primary_image ?: $product->image);
+        $cart[$rowId]['variant_label'] = $variant ? $this->makeVariantLabel($variant) : null;
+        $cart[$rowId]['product_id'] = $product->id;
+        $cart[$rowId]['variant_id'] = $variant?->id;
 
         session()->put('cart', $cart);
 
         return redirect()->route('cart.index')->with('success', 'Coș actualizat.');
     }
 
-    public function remove(Product $product)
+    public function remove(string $rowId)
     {
         $cart = session()->get('cart', []);
-        $id = (string)$product->id;
 
-        unset($cart[$id]);
+        unset($cart[$rowId]);
 
         session()->put('cart', $cart);
 
@@ -96,38 +118,99 @@ class CartController extends Controller
 
         return redirect()->route('cart.index')->with('success', 'Coș golit.');
     }
-    public function buyNow(Product $product)
+
+    private function storeCartItem(Request $request, Product $product, bool $redirectToCart = false)
     {
-        // doar produse active
-        if ((int)$product->status !== 1) {
+        if ((int) $product->status !== 1) {
             return redirect()->route('home')->with('error', 'Produsul nu este disponibil.');
         }
 
-        $cart = session()->get('cart', []);
-        $id = (string)$product->id;
+        $variant = null;
+        $hasVariants = $product->variants()->where('is_active', true)->exists();
 
-        if (isset($cart[$id])) {
-            $newQty = (int)$cart[$id]['qty'] + 1;
-            $cart[$id]['qty'] = min($newQty, (int)$product->stock);
+        if ($hasVariants) {
+            $request->validate([
+                'variant_id' => ['required', 'integer'],
+            ]);
+
+            $variant = ProductVariant::query()
+                ->with(['attributes.attribute', 'attributes.option'])
+                ->where('product_id', $product->id)
+                ->where('id', (int) $request->input('variant_id'))
+                ->where('is_active', true)
+                ->first();
+
+            if (!$variant) {
+                return back()->with('error', 'Alege o variantă validă.');
+            }
+        }
+
+        $stock = $variant ? (int) $variant->stock : (int) $product->stock;
+
+        if ($stock <= 0) {
+            return back()->with('error', 'Produsul sau varianta selectată nu este în stoc.');
+        }
+
+        $price = $variant && !is_null($variant->price)
+            ? (float) $variant->price
+            : (float) $product->final_price;
+
+        $rowId = $this->makeRowId($product->id, $variant?->id);
+        $cart = session()->get('cart', []);
+
+        if (isset($cart[$rowId])) {
+            $newQty = (int) $cart[$rowId]['qty'] + 1;
+            $cart[$rowId]['qty'] = min($newQty, $stock);
         } else {
-            $cart[$id] = [
-                'id'    => $product->id,
-                'name'  => $product->name,
-                'price' => (float)$product->final_price,
-                'qty'   => 1,
-                'stock' => (int)$product->stock,
-                // opțional: dacă vrei imagine în coș, o poți adăuga fără să strici nimic
-                'image' => $product->image,
+            $cart[$rowId] = [
+                'row_id' => $rowId,
+                'id' => $product->id,
+                'product_id' => $product->id,
+                'variant_id' => $variant?->id,
+                'name' => $product->name,
+                'variant_label' => $variant ? $this->makeVariantLabel($variant) : null,
+                'price' => $price,
+                'qty' => 1,
+                'stock' => $stock,
+                'image' => $variant && $variant->image
+                    ? $variant->image
+                    : ($product->primary_image ?: $product->image),
             ];
         }
 
-        // sincronizăm mereu preț+stoc, în caz că s-au schimbat
-        $cart[$id]['stock'] = (int)$product->stock;
-        $cart[$id]['price'] = (float)$product->final_price;
+        $cart[$rowId]['stock'] = $stock;
+        $cart[$rowId]['price'] = $price;
+        $cart[$rowId]['product_id'] = $product->id;
+        $cart[$rowId]['variant_id'] = $variant?->id;
+        $cart[$rowId]['variant_label'] = $variant ? $this->makeVariantLabel($variant) : null;
+        $cart[$rowId]['image'] = $variant && $variant->image
+            ? $variant->image
+            : ($product->primary_image ?: $product->image);
 
         session()->put('cart', $cart);
 
-        return redirect()->route('cart.index')->with('success', 'Produs adăugat. Poți finaliza comanda.');
+        if ($redirectToCart) {
+            return redirect()->route('cart.index')->with('success', 'Produs adăugat. Poți finaliza comanda.');
+        }
+
+        return back()->with('success', 'Produs adăugat în coș.');
     }
 
+    private function makeRowId(int $productId, ?int $variantId = null): string
+    {
+        return $productId . '-' . ($variantId ?: 'base');
+    }
+
+    private function makeVariantLabel(ProductVariant $variant): string
+    {
+        $variant->loadMissing(['attributes.attribute', 'attributes.option']);
+
+        return $variant->attributes
+            ->map(function ($attribute) {
+                $name = $attribute->attribute->name ?? 'Atribut';
+                $value = $attribute->option->label ?? $attribute->option->value ?? 'Valoare';
+                return $name . ': ' . $value;
+            })
+            ->implode(' / ');
+    }
 }

@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\SellerCommissionPeriod;
+use App\Services\SellerCommissionService;
+use App\Support\MessageState;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(SellerCommissionService $commissionService)
     {
         $user = auth()->user();
 
@@ -21,33 +23,57 @@ class DashboardController extends Controller
             abort(403, 'Acces interzis.');
         }
 
-        $commissionPercent = (float) ($user->sellerProfile->commission_percent ?? 10);
+        $commissionService->syncAllActiveSellers();
+        $currentPeriod = $commissionService->currentPeriodForSeller($user);
 
-        $productsCount = Product::where('seller_id', $user->id)->count();
-
-        $paidOrdersCount = Order::where('payment_status', 'paid')
-            ->whereHas('items', function ($q) use ($user) {
-                $q->where('seller_id', $user->id);
-            })
+        $productsCount = Product::query()
+            ->where('seller_id', $user->id)
+            ->where('status', 1)
             ->count();
 
-        $grossRevenue = OrderItem::where('seller_id', $user->id)
-            ->whereHas('order', function ($q) {
-                $q->where('payment_status', 'paid');
-            })
-            ->selectRaw('SUM(price * qty) as total')
-            ->value('total') ?? 0;
+        $paidOrdersCount = Order::query()
+            ->where('seller_id', $user->id)
+            ->where('payment_flow', 'seller_direct')
+            ->where('payment_status', 'paid')
+            ->count();
 
-        $marketplaceCommission = $grossRevenue * ($commissionPercent / 100);
-        $netRevenue = $grossRevenue - $marketplaceCommission;
+        $grossRevenue = (float) $currentPeriod->gross_sales_amount;
+        $commissionPercent = (float) $currentPeriod->commission_percent;
+        $commissionDue = (float) $currentPeriod->commission_amount;
+        $nextDeadline = $currentPeriod->deadline_at;
+        $daysRemaining = $nextDeadline ? now()->startOfDay()->diffInDays($nextDeadline, false) : null;
+
+        $paymentAccount = $user->sellerProfile?->paymentAccount;
+        $paymentAccountStatus = $paymentAccount?->status ?? 'missing';
+
+        $messageUnreadCount = 0;
+        if (MessageState::supported()) {
+            $messageUnreadCount = \App\Models\Conversation::query()
+                ->where(function ($query) use ($user) {
+                    $query->where('seller_id', $user->id)
+                        ->orWhere('client_id', $user->id);
+                })
+                ->withCount([
+                    'messages as unread_messages_count' => function ($query) {
+                        $query->whereNull('read_at')
+                            ->where('sender_id', '!=', auth()->id());
+                    },
+                ])
+                ->get()
+                ->sum('unread_messages_count');
+        }
 
         return view('seller.dashboard', compact(
             'productsCount',
             'paidOrdersCount',
             'grossRevenue',
             'commissionPercent',
-            'marketplaceCommission',
-            'netRevenue'
+            'commissionDue',
+            'nextDeadline',
+            'daysRemaining',
+            'currentPeriod',
+            'paymentAccountStatus',
+            'messageUnreadCount'
         ));
     }
 }

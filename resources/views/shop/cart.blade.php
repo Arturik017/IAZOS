@@ -1,6 +1,5 @@
 <x-app-layout>
 
-    {{-- HEADER --}}
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>
@@ -17,11 +16,9 @@
         </div>
     </x-slot>
 
-    {{-- CONTENT --}}
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 space-y-6">
 
-            {{-- FLASH MESSAGES --}}
             @if(session('success'))
                 <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-green-800">
                     {{ session('success') }}
@@ -34,7 +31,6 @@
                 </div>
             @endif
 
-            {{-- EMPTY CART --}}
             @if(empty($cart))
                 <div class="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow">
                     <div class="text-lg font-semibold text-gray-900">
@@ -53,82 +49,101 @@
             @else
                 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
-                    {{-- PRODUCT LIST --}}
                     <div class="space-y-4 lg:col-span-2">
-                        @foreach($cart as $item)
+                        @foreach($cart as $rowId => $item)
                             <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow">
+                                <div class="flex flex-col md:flex-row md:items-start gap-4">
+                                    <div class="w-full md:w-28 shrink-0">
+                                        @php
+                                            $cartImage = \App\Support\MediaUrl::public($item['image'] ?? null);
+                                        @endphp
 
-                                {{-- PRODUCT INFO --}}
-                                <div class="flex items-start justify-between gap-4">
-                                    <div>
-                                        <h3 class="text-lg font-semibold text-gray-900">
-                                            {{ $item['name'] }}
-                                        </h3>
-
-                                        <p class="mt-1 text-sm text-gray-500">
-                                            Preț:
-                                            <span class="font-semibold text-gray-900">
-                                                {{ number_format($item['price'], 2) }} MDL
-                                            </span>
-                                        </p>
-
-                                        <p class="mt-1 text-xs text-gray-400">
-                                            Stoc disponibil: {{ $item['stock'] }}
-                                        </p>
+                                        @if($cartImage)
+                                            <img
+                                                src="{{ $cartImage }}"
+                                                alt="{{ $item['name'] }}"
+                                                class="w-full h-28 object-cover rounded-xl border border-gray-200"
+                                            >
+                                        @else
+                                            <div class="w-full h-28 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-sm text-gray-400">
+                                                Fără imagine
+                                            </div>
+                                        @endif
                                     </div>
 
-                                    <div class="text-right">
-                                        <p class="text-sm text-gray-500">Total produs</p>
-                                        <p class="text-lg font-bold text-gray-900">
-                                            {{ number_format($item['price'] * $item['qty'], 2) }} MDL
-                                        </p>
+                                    <div class="flex-1">
+                                        <div class="flex items-start justify-between gap-4">
+                                            <div>
+                                                <h3 class="text-lg font-semibold text-gray-900">
+                                                    {{ $item['name'] }}
+                                                </h3>
+
+                                                @if(!empty($item['variant_label']))
+                                                    <p class="mt-1 text-sm text-blue-700 font-medium">
+                                                        {{ $item['variant_label'] }}
+                                                    </p>
+                                                @endif
+
+                                                <p class="mt-2 text-sm text-gray-500">
+                                                    Preț:
+                                                    <span class="font-semibold text-gray-900">
+                                                        {{ number_format($item['price'], 2) }} MDL
+                                                    </span>
+                                                </p>
+
+                                                <p class="mt-1 text-xs text-gray-400">
+                                                    Stoc disponibil: {{ $item['stock'] }}
+                                                </p>
+                                            </div>
+
+                                            <div class="text-right">
+                                                <p class="text-sm text-gray-500">Total produs</p>
+                                                <p class="text-lg font-bold text-gray-900">
+                                                    {{ number_format($item['price'] * $item['qty'], 2) }} MDL
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                                            <form method="POST"
+                                                  action="{{ route('cart.update', $rowId) }}"
+                                                  class="flex items-center gap-2">
+                                                @csrf
+
+                                                <label class="text-sm text-gray-600">
+                                                    Cantitate
+                                                </label>
+
+                                                <input
+                                                    type="number"
+                                                    name="qty"
+                                                    min="1"
+                                                    max="{{ $item['stock'] }}"
+                                                    value="{{ $item['qty'] }}"
+                                                    class="w-24 rounded-lg border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+                                                />
+
+                                                <button
+                                                    class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black transition">
+                                                    Actualizează
+                                                </button>
+                                            </form>
+
+                                            <form method="POST"
+                                                  action="{{ route('cart.remove', $rowId) }}">
+                                                @csrf
+                                                <button
+                                                    class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">
+                                                    Șterge
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
-
-                                {{-- ACTIONS --}}
-                                <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-
-                                    {{-- UPDATE QTY --}}
-                                    <form method="POST"
-                                          action="{{ route('cart.update', $item['id']) }}"
-                                          class="flex items-center gap-2">
-                                        @csrf
-
-                                        <label class="text-sm text-gray-600">
-                                            Cantitate
-                                        </label>
-
-                                        <input
-                                            type="number"
-                                            name="qty"
-                                            min="1"
-                                            max="{{ $item['stock'] }}"
-                                            value="{{ $item['qty'] }}"
-                                            class="w-24 rounded-lg border-gray-300 focus:border-gray-400 focus:ring-gray-400"
-                                        />
-
-                                        <button
-                                            class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black transition">
-                                            Actualizează
-                                        </button>
-                                    </form>
-
-                                    {{-- REMOVE --}}
-                                    <form method="POST"
-                                          action="{{ route('cart.remove', $item['id']) }}">
-                                        @csrf
-                                        <button
-                                            class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">
-                                            Șterge
-                                        </button>
-                                    </form>
-
                                 </div>
                             </div>
                         @endforeach
                     </div>
 
-                    {{-- SUMMARY --}}
                     <div class="h-fit rounded-2xl border border-gray-100 bg-white p-6 shadow">
                         <h3 class="text-lg font-bold text-gray-900">
                             Sumar comandă
@@ -162,13 +177,11 @@
                             </span>
                         </div>
 
-                        {{-- CHECKOUT --}}
                         <a href="{{ auth()->check() ? route('checkout.index') : route('register') }}"
                            class="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-gray-900 px-4 py-3 font-semibold text-white hover:bg-black transition">
                             Finalizează comanda
                         </a>
 
-                        {{-- CLEAR CART --}}
                         <form method="POST"
                               action="{{ route('cart.clear') }}"
                               class="mt-3">

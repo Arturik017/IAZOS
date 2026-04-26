@@ -12,15 +12,15 @@
         </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="market-page py-12">
+        <div class="market-shell mx-auto px-4 sm:px-6 lg:px-8">
             @if(session('success'))
                 <div class="mb-4 rounded-lg bg-green-100 text-green-800 px-4 py-3">
                     {{ session('success') }}
                 </div>
             @endif
 
-            <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="market-section bg-white shadow rounded-xl overflow-hidden">
 
                 <div class="p-6 border-b">
                     <p class="text-sm text-gray-600">
@@ -29,7 +29,7 @@
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
+                    <table class="market-table min-w-full text-sm">
                         <thead class="bg-gray-50 text-gray-700">
                             <tr>
                                 <th class="px-6 py-3 text-left">ID</th>

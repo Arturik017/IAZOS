@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Support\ImageStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -32,7 +33,7 @@ class BannerController extends Controller
             'status'     => ['nullable'],
         ]);
 
-        $imagePath = $request->file('image')->store('banners', 'public');
+        $imagePath = ImageStorage::storeWebp($request->file('image'), 'banners', 'public', 82, 'image');
 
         Banner::create([
             'image'      => $imagePath,

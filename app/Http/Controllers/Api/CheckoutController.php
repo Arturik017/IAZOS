@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Services\MarketplaceFinanceService;
 use App\Services\Maib\MaibService;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class CheckoutController extends Controller
 {
-    public function store(Request $request, MaibService $maib)
+    public function store(Request $request, MaibService $maib, MarketplaceFinanceService $finance)
     {
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
@@ -108,6 +109,7 @@ class CheckoutController extends Controller
                         'payment_status' => 'paid',
                         'paid_at' => now(),
                     ]);
+                    $finance->allocateOrderPayment($order->fresh('items.seller.sellerProfile'));
 
                     return response()->json([
                         'ok' => true,

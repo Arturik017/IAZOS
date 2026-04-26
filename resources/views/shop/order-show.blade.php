@@ -80,6 +80,13 @@
                     'delivered' => 'bg-green-100 text-green-800',
                     'cancelled' => 'bg-red-100 text-red-800',
                 ];
+
+                $refundStatusPretty = [
+                    'requested' => 'Trimisa de client',
+                    'seller_reviewed' => 'Are raspuns seller',
+                    'approved' => 'Aprobata de admin',
+                    'rejected' => 'Respinsa de admin',
+                ];
             @endphp
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -252,6 +259,12 @@
                                                 </span>
                                             </div>
 
+                                            @if(!empty($item->variant_label))
+                                                <div class="mt-2 text-sm font-medium text-blue-700">
+                                                    {{ $item->variant_label }}
+                                                </div>
+                                            @endif
+
                                             <div class="mt-2 text-sm text-gray-600">
                                                 Cantitate: {{ $item->qty }}
                                                 • Preț: {{ number_format((float) $item->price, 2) }} MDL
@@ -263,6 +276,39 @@
                                                     Ultima actualizare status:
                                                     {{ $item->seller_status_updated_at->format('d.m.Y H:i') }}
                                                 </div>
+                                            @endif
+
+                                            @if($item->refundRequest)
+                                                <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                                    <div class="font-semibold">Solicitare refund</div>
+                                                    <div class="mt-1">Status: {{ $refundStatusPretty[$item->refundRequest->status] ?? $item->refundRequest->status }}</div>
+                                                    <div class="mt-1">Cerere: {{ $item->refundRequest->target_status === 'cancelled' ? 'Anulare' : 'Rambursare' }}</div>
+                                                    <div class="mt-1">Motiv: {{ $item->refundRequest->client_reason }}</div>
+                                                    @if($item->refundRequest->seller_response)
+                                                        <div class="mt-2 text-xs">Raspuns seller: {{ $item->refundRequest->seller_response }}</div>
+                                                    @endif
+                                                    @if($item->refundRequest->admin_decision_note)
+                                                        <div class="mt-2 text-xs">Nota admin: {{ $item->refundRequest->admin_decision_note }}</div>
+                                                    @endif
+                                                </div>
+                                            @elseif(!in_array($item->financial_status, ['cancelled', 'refunded'], true))
+                                                <form method="POST"
+                                                      action="{{ route('refund_requests.store', [$order, $item]) }}"
+                                                      class="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 space-y-3">
+                                                    @csrf
+                                                    <div class="text-sm font-semibold text-red-900">Solicita refund pentru acest produs</div>
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <select name="target_status" class="rounded-xl border-gray-300 text-sm">
+                                                            <option value="cancelled">Anulare</option>
+                                                            <option value="refunded">Rambursare</option>
+                                                        </select>
+                                                        <input name="client_reason" required placeholder="Motiv scurt" class="rounded-xl border-gray-300 text-sm">
+                                                    </div>
+                                                    <textarea name="client_note" rows="3" placeholder="Explica pe scurt problema pentru seller si admin" class="w-full rounded-xl border-gray-300 text-sm"></textarea>
+                                                    <button class="inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
+                                                        Solicita refund
+                                                    </button>
+                                                </form>
                                             @endif
                                         </div>
 

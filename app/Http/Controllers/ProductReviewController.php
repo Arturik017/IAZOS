@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Support\ImageStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -49,7 +50,7 @@ class ProductReviewController extends Controller
             }
 
             foreach ($request->file('images') as $file) {
-                $path = $file->store('product-reviews', 'public');
+                $path = ImageStorage::storeWebp($file, 'product-reviews', 'public', 80, 'images');
 
                 $review->images()->create([
                     'image_path' => $path,

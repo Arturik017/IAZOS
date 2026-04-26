@@ -56,6 +56,7 @@ class OrderController extends Controller
             'items.product',
             'items.seller',
             'items.seller.sellerProfile',
+            'items.refundRequest.reviewer',
         ]);
 
         $sellerGroups = $order->items

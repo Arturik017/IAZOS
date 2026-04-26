@@ -1,349 +1,549 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Editează produs
-        </h2>
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-semibold text-gray-900">
+                    Editează produs
+                </h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Modifică produsul, atributele și variantele într-un flow clar.
+                </p>
+            </div>
+
+            <a href="{{ route('seller.products.index') }}"
+               class="inline-flex items-center rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Înapoi
+            </a>
+        </div>
     </x-slot>
 
     @php
-        $subMap = $categories->mapWithKeys(function ($cat) {
+        $buildLeafMap = function ($nodes, $prefix = '') use (&$buildLeafMap) {
+            $items = collect();
+
+            foreach ($nodes as $node) {
+                $label = $prefix ? $prefix . ' / ' . $node->name : $node->name;
+
+                if ($node->childrenRecursive && $node->childrenRecursive->count()) {
+                    $items = $items->merge($buildLeafMap($node->childrenRecursive, $label));
+                } else {
+                    $items->push([
+                        'id' => $node->id,
+                        'name' => $label,
+                    ]);
+                }
+            }
+
+            return $items;
+        };
+
+        $subMap = $categories->mapWithKeys(function ($root) use ($buildLeafMap) {
             return [
-                $cat->id => $cat->children->map(fn ($s) => [
-                    'id' => $s->id,
-                    'name' => $s->name,
-                ])->values(),
+                $root->id => $buildLeafMap($root->childrenRecursive)->values(),
             ];
         });
 
         $selectedCat = old('category_id', $product->category_id);
         $selectedSub = old('subcategory_id', $product->subcategory_id);
+
+        $existingAttributes = [];
+        $existingUnits = [];
+
+        foreach ($product->attributes as $attributeValue) {
+            $attributeId = $attributeValue->category_attribute_id;
+
+            if (!is_null($attributeValue->unit) && !isset($existingUnits[$attributeId])) {
+                $existingUnits[$attributeId] = $attributeValue->unit;
+            }
+
+            if ($attributeValue->option_id) {
+                if (!isset($existingAttributes[$attributeId])) {
+                    $existingAttributes[$attributeId] = [];
+                }
+                $existingAttributes[$attributeId][] = $attributeValue->option_id;
+            } elseif (!is_null($attributeValue->value_text)) {
+                $existingAttributes[$attributeId] = $attributeValue->value_text;
+            } elseif (!is_null($attributeValue->value_number)) {
+                $existingAttributes[$attributeId] = $attributeValue->value_number;
+            } elseif (!is_null($attributeValue->value_boolean)) {
+                $existingAttributes[$attributeId] = $attributeValue->value_boolean ? '1' : '0';
+            }
+        }
+
+        $attributeValues = old('attributes', $existingAttributes);
+        $unitValues = old('units', $existingUnits);
+
+        $existingVariants = $product->variants->map(function ($variant) {
+            $attributes = [];
+
+            foreach ($variant->attributes as $variantAttribute) {
+                if (!empty($variantAttribute->custom_value)) {
+                    $attributes[$variantAttribute->category_attribute_id] = [
+                        'custom_value' => $variantAttribute->custom_value,
+                    ];
+                } else {
+                    $attributes[$variantAttribute->category_attribute_id] = $variantAttribute->option_id;
+                }
+            }
+
+            return [
+                'sku' => $variant->sku,
+                'price' => $variant->price,
+                'stock' => $variant->stock,
+                'is_active' => $variant->is_active,
+                'attributes' => $attributes,
+            ];
+        })->values()->toArray();
+
+        $variantValues = old('variants', $existingVariants);
     @endphp
 
-    <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white p-6 shadow rounded-2xl">
+    <div class="py-8">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            @if ($errors->any())
+                <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+                    <div class="text-sm font-semibold text-red-700">Există erori:</div>
+                    <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-red-600">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
-                @if ($errors->any())
-                    <div class="mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3">
-                        <div class="font-semibold mb-1">Există erori:</div>
-                        <ul class="list-disc ml-5 text-sm">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+            <form id="productForm"
+                  method="POST"
+                  action="{{ route('seller.products.update', $product->id) }}"
+                  enctype="multipart/form-data"
+                  class="space-y-6">
+                @csrf
+                @method('PUT')
 
-                <form method="POST" action="{{ route('seller.products.update', $product->id) }}" enctype="multipart/form-data" class="space-y-6">
-                    @csrf
-                    @method('PUT')
-
-                    <input type="hidden" name="ai_generated_temp_path" id="ai_generated_temp_path" value="">
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Nume produs</label>
-                        <input
-                            name="name"
-                            value="{{ old('name', $product->name) }}"
-                            class="mt-1 border w-full p-3 rounded-xl"
-                            required
-                        >
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Descriere</label>
-                        <textarea
-                            name="description"
-                            rows="5"
-                            class="mt-1 border w-full p-3 rounded-xl"
-                        >{{ old('description', $product->description) }}</textarea>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Preț final (MDL)</label>
-                            <input
-                                name="final_price"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value="{{ old('final_price', $product->final_price) }}"
-                                class="mt-1 border w-full p-3 rounded-xl"
-                                required
-                            >
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Stoc</label>
-                            <input
-                                name="stock"
-                                type="number"
-                                min="0"
-                                value="{{ old('stock', $product->stock) }}"
-                                class="mt-1 border w-full p-3 rounded-xl"
-                                required
-                            >
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Categorie</label>
-                            <select id="category_id" name="category_id" class="mt-1 border w-full p-3 rounded-xl">
-                                <option value="">— alege categoria —</option>
-                                @foreach($categories as $cat)
-                                    <option value="{{ $cat->id }}" @selected((string)$selectedCat === (string)$cat->id)>
-                                        {{ $cat->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Subcategorie</label>
-                            <select id="subcategory_id" name="subcategory_id" class="mt-1 border w-full p-3 rounded-xl" disabled>
-                                <option value="">— alege subcategoria —</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Imagine nouă (opțional)</label>
-                        <input
-                            id="image"
-                            type="file"
-                            name="image"
-                            accept="image/*"
-                            class="mt-1 block w-full"
-                        >
-
-                        @if($product->image)
-                            <div class="mt-3">
-                                <div class="text-sm font-medium text-gray-700 mb-2">Imagine curentă</div>
-                                <img
-                                    src="{{ asset('storage/' . $product->image) }}"
-                                    alt="{{ $product->name }}"
-                                    class="w-48 h-48 object-cover rounded-xl border"
-                                >
+                <section class="rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50 to-white p-6 shadow-sm">
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="max-w-3xl">
+                            <div class="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">
+                                Editare ghidata
                             </div>
-                        @endif
-
-                        <div id="imagePreviewWrap" class="mt-4 hidden">
-                            <div class="text-sm font-medium text-gray-700 mb-2">Preview imagine nouă</div>
-                            <img id="imagePreview" class="w-48 h-48 object-cover rounded-xl border" alt="Preview">
-                        </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
-                        <h3 class="text-lg font-semibold text-gray-900">AI banner assistant</h3>
-                        <p class="mt-1 text-sm text-gray-600">
-                            Pentru regenerare, încarcă o imagine nouă sau folosește aceeași imagine actuală din produs.
-                        </p>
-
-                        <div class="mt-4">
-                            <label class="block text-sm font-medium text-gray-700">Prompt banner AI</label>
-                            <textarea
-                                name="ai_banner_prompt"
-                                id="ai_banner_prompt"
-                                rows="4"
-                                class="mt-1 border w-full p-3 rounded-xl"
-                                placeholder="Ex: Banner premium, fundal dark, accent cinematic, produsul în centru, stil marketplace."
-                            >{{ old('ai_banner_prompt', $product->ai_banner_prompt) }}</textarea>
+                            <h3 class="mt-2 text-2xl font-semibold text-gray-900">
+                                Pastreaza produsul usor de inteles pentru seller si clar pentru client
+                            </h3>
+                            <p class="mt-2 text-sm leading-7 text-gray-600">
+                                Verifica mai intai categoria si baza produsului. In zona de variante intra doar daca produsul chiar cere o alegere reala din partea clientului.
+                            </p>
                         </div>
 
-                        <div class="mt-4 flex flex-wrap gap-3">
-                            <button
-                                type="button"
-                                id="generateBannerBtn"
-                                class="px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
-                            >
-                                Generează banner AI
-                            </button>
-
-                            <button
-                                type="button"
-                                id="clearBannerBtn"
-                                class="hidden px-5 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
-                            >
-                                Șterge preview banner
-                            </button>
-                        </div>
-
-                        <div id="bannerStatus" class="mt-3 text-sm text-gray-600"></div>
-
-                        @if($product->ai_banner_path)
-                            <div class="mt-4">
-                                <div class="text-sm font-medium text-gray-700 mb-2">Banner AI curent</div>
-                                <img
-                                    src="{{ asset('storage/' . $product->ai_banner_path) }}"
-                                    alt="Banner AI"
-                                    class="w-full max-w-xl rounded-xl border"
-                                >
+                        <div class="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
+                            <div class="rounded-2xl border border-white/70 bg-white px-4 py-4 shadow-sm">
+                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">1</div>
+                                <div class="mt-2 text-sm font-semibold text-gray-900">Categoria</div>
+                                <div class="mt-1 text-xs leading-6 text-gray-500">Schimb-o doar daca produsul chiar a fost pus intr-o categorie gresita.</div>
                             </div>
-                        @endif
-
-                        <div id="bannerPreviewWrap" class="mt-5 hidden">
-                            <div class="text-sm font-medium text-gray-700 mb-2">Preview banner AI nou</div>
-                            <img id="bannerPreview" class="w-full max-w-3xl rounded-2xl border" alt="Banner AI">
+                            <div class="rounded-2xl border border-white/70 bg-white px-4 py-4 shadow-sm">
+                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">2</div>
+                                <div class="mt-2 text-sm font-semibold text-gray-900">Datele de baza</div>
+                                <div class="mt-1 text-xs leading-6 text-gray-500">Nume, descriere, pret, stoc si imagine principala.</div>
+                            </div>
+                            <div class="rounded-2xl border border-white/70 bg-white px-4 py-4 shadow-sm">
+                                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">3</div>
+                                <div class="mt-2 text-sm font-semibold text-gray-900">Variante reale</div>
+                                <div class="mt-1 text-xs leading-6 text-gray-500">Adauga doar combinatiile care exista efectiv in stoc sau in oferta.</div>
+                            </div>
                         </div>
                     </div>
+                </section>
 
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-3 rounded-xl">
-                        Salvează modificările
-                    </button>
-                </form>
+                <div class="grid grid-cols-1 gap-6 xl:grid-cols-[220px_minmax(0,1fr)]">
+                    <aside class="h-fit rounded-3xl border border-gray-200 bg-white p-5 shadow-sm xl:sticky xl:top-6">
+                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">
+                            Editare produs
+                        </div>
 
-            </div>
+                        <div class="mt-4 space-y-3">
+                            <a href="#step-1" class="block rounded-2xl border border-gray-200 px-4 py-3 hover:bg-gray-50">
+                                <div class="text-xs font-semibold text-blue-600">PASUL 1</div>
+                                <div class="mt-1 text-sm font-medium text-gray-900">Categorie</div>
+                            </a>
+
+                            <a href="#step-2" class="block rounded-2xl border border-gray-200 px-4 py-3 hover:bg-gray-50">
+                                <div class="text-xs font-semibold text-blue-600">PASUL 2</div>
+                                <div class="mt-1 text-sm font-medium text-gray-900">Detalii produs</div>
+                            </a>
+
+                            <a href="#step-3" class="block rounded-2xl border border-gray-200 px-4 py-3 hover:bg-gray-50">
+                                <div class="text-xs font-semibold text-blue-600">PASUL 3</div>
+                                <div class="mt-1 text-sm font-medium text-gray-900">Atribute & variante</div>
+                            </a>
+
+                            <a href="#step-4" class="block rounded-2xl border border-gray-200 px-4 py-3 hover:bg-gray-50">
+                                <div class="text-xs font-semibold text-blue-600">PASUL 4</div>
+                                <div class="mt-1 text-sm font-medium text-gray-900">Imagini & salvare</div>
+                            </a>
+                        </div>
+
+                        <div id="listingReadinessPanel" class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">
+                                    Stare formular
+                                </div>
+                                <span id="listingReadinessBadge" class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-blue-700">
+                                    In lucru
+                                </span>
+                            </div>
+                            <p id="listingReadinessText" class="mt-3 text-sm text-blue-900">
+                                Verifica rapid daca produsul ramane complet pentru filtre, variante si imagini dupa modificari.
+                            </p>
+                            <ul id="listingReadinessList" class="mt-3 space-y-2 text-xs text-blue-800"></ul>
+                        </div>
+                    </aside>
+
+                    <div class="space-y-6">
+                        <section id="step-1" class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="mb-6">
+                                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">
+                                    Pasul 1
+                                </div>
+                                <h3 class="mt-2 text-xl font-semibold text-gray-900">
+                                    Categoria produsului
+                                </h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Categorie principală
+                                    </label>
+                                    <select id="category_id"
+                                            name="category_id"
+                                            class="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
+                                            required>
+                                        <option value="">— alege categoria —</option>
+                                        @foreach($categories as $cat)
+                                            <option value="{{ $cat->id }}" @selected((string)$selectedCat === (string)$cat->id)>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Categorie finală
+                                    </label>
+                                    <select id="subcategory_id"
+                                            name="subcategory_id"
+                                            class="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
+                                            disabled>
+                                        <option value="">— alege categoria finală —</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="step-2" class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="mb-6">
+                                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">
+                                    Pasul 2
+                                </div>
+                                <h3 class="mt-2 text-xl font-semibold text-gray-900">
+                                    Detalii produs
+                                </h3>
+                            </div>
+
+                            <div class="space-y-6">
+                                <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                    <div class="text-sm font-semibold text-gray-900">Tip listare</div>
+                                    <p class="mt-1 text-sm text-gray-500">
+                                        Aici verifici rapid daca produsul trebuie sa ramana simplu sau cu variante.
+                                    </p>
+
+                                    <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                                        <label class="rounded-2xl border border-gray-200 bg-white p-4 transition hover:border-gray-300" for="productModeSimple">
+                                            <div class="flex items-start gap-3">
+                                                <input
+                                                    id="productModeSimple"
+                                                    type="radio"
+                                                    name="product_mode"
+                                                    value="simple"
+                                                    class="mt-1 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    {{ empty($variantValues) ? 'checked' : '' }}
+                                                >
+                                                <div>
+                                                    <div class="text-sm font-semibold text-gray-900">Produs simplu</div>
+                                                    <div class="mt-1 text-xs leading-6 text-gray-500">
+                                                        Un singur pret si un singur stoc pentru toata listarea.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        <label class="rounded-2xl border border-gray-200 bg-white p-4 transition hover:border-gray-300" for="productModeVariants">
+                                            <div class="flex items-start gap-3">
+                                                <input
+                                                    id="productModeVariants"
+                                                    type="radio"
+                                                    name="product_mode"
+                                                    value="variants"
+                                                    class="mt-1 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    {{ !empty($variantValues) ? 'checked' : '' }}
+                                                >
+                                                <div>
+                                                    <div class="text-sm font-semibold text-gray-900">Produs cu variante</div>
+                                                    <div class="mt-1 text-xs leading-6 text-gray-500">
+                                                        Clientul alege intre culoare, marime, memorie, volum sau alt model disponibil.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Nume produs
+                                    </label>
+                                    <input type="text"
+                                           name="name"
+                                           value="{{ old('name', $product->name) }}"
+                                           class="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
+                                           required>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Descriere
+                                    </label>
+                                    <textarea name="description"
+                                              rows="6"
+                                              class="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm">{{ old('description', $product->description) }}</textarea>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">
+                                            Preț de bază (MDL)
+                                        </label>
+                                        <input type="number"
+                                               step="0.01"
+                                               min="0"
+                                               name="final_price"
+                                               value="{{ old('final_price', $product->final_price) }}"
+                                               class="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
+                                               required>
+                                    </div>
+
+                                    <div id="baseStockWrap">
+                                        <label class="block text-sm font-medium text-gray-700">
+                                            Stoc total
+                                        </label>
+                                        <input type="number"
+                                               min="0"
+                                               name="stock"
+                                               value="{{ old('stock', $product->stock) }}"
+                                               class="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm">
+                                        <p class="mt-2 text-xs text-gray-500">
+                                            Dacă produsul are variante, stocul total se calculează automat.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="step-3" class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="mb-6">
+                                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">
+                                    Pasul 3
+                                </div>
+                                <h3 class="mt-2 text-xl font-semibold text-gray-900">
+                                    Atribute și variante
+                                </h3>
+                            </div>
+
+                            <div id="attributesPlaceholder" class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-10 text-center text-sm text-gray-500">
+                                Alege mai întâi categoria finală pentru a vedea atributele.
+                            </div>
+
+                            <div id="catalogAssistantPanel" class="mb-5 hidden rounded-2xl border px-4 py-4">
+                                <div id="catalogAssistantTitle" class="text-sm font-semibold"></div>
+                                <p id="catalogAssistantText" class="mt-2 text-sm"></p>
+                                <ul id="catalogAssistantList" class="mt-3 space-y-2 text-xs"></ul>
+                            </div>
+
+                            <div id="dynamicAttributesWrap" class="hidden">
+                                <div id="dynamicAttributes" class="grid grid-cols-1 gap-6 md:grid-cols-2"></div>
+                            </div>
+
+                            <div id="variantConfiguratorWrap" class="mt-8 hidden rounded-3xl border border-amber-200 bg-amber-50 p-5">
+                                <input type="hidden" name="has_variants_enabled" id="hasVariantsEnabledInput" value="{{ !empty($variantValues) ? '1' : '0' }}">
+                                <input
+                                    type="checkbox"
+                                    id="hasVariantsToggle"
+                                    class="hidden"
+                                    {{ !empty($variantValues) ? 'checked' : '' }}
+                                >
+                                <div>
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        Variante produs
+                                    </h4>
+                                    <p class="mt-1 text-sm text-gray-600">
+                                        Sectiunea apare doar cand alegi sus ca produsul are variante reale si clientul trebuie sa poata selecta intre ele.
+                                    </p>
+                                </div>
+
+                                <div id="variantAttributesSelectors" class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2"></div>
+
+                                <div id="variantHelper" class="mt-4 rounded-2xl border border-amber-200 bg-white/80 px-4 py-3 text-sm text-amber-900">
+                                    Selecteaza doar valorile reale ale produsului. Daca ai multe combinatii, genereaza-le si apoi completeaza pretul si stocul.
+                                </div>
+
+                                <div class="mt-5 flex flex-wrap gap-3">
+                                    <button type="button"
+                                            id="generateVariantsBtn"
+                                            class="inline-flex items-center rounded-2xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white hover:bg-amber-700">
+                                        Generează combinații
+                                    </button>
+
+                                    <button type="button"
+                                            id="addVariantRowBtn"
+                                            class="inline-flex items-center rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                                        Adaugă manual
+                                    </button>
+
+                                    <button type="button"
+                                            id="clearVariantsBtn"
+                                            class="inline-flex items-center rounded-2xl border border-red-300 bg-white px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-50">
+                                        Șterge toate
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="variantsTableWrap" class="mt-6 hidden rounded-3xl border border-gray-200 bg-gray-50 p-5">
+                                <div class="mb-4">
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        Lista variantelor
+                                    </h4>
+                                </div>
+
+                                <div id="variantsRows" class="space-y-4"></div>
+                            </div>
+                        </section>
+
+                        <section id="step-4" class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="mb-6">
+                                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">
+                                    Pasul 4
+                                </div>
+                                <h3 class="mt-2 text-xl font-semibold text-gray-900">
+                                    Imagini și salvare
+                                </h3>
+                            </div>
+
+                            <div class="space-y-6">
+                                <div class="rounded-2xl border border-gray-200 p-5">
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Imagine principală nouă
+                                    </label>
+                                    <input id="image"
+                                           type="file"
+                                           name="image"
+                                           accept="image/*"
+                                           data-has-existing-image="{{ $product->image ? '1' : '0' }}"
+                                           class="mt-3 block w-full text-sm text-gray-700">
+
+                                    @if($product->image)
+                                        <div class="mt-4">
+                                            <div class="mb-2 text-sm font-medium text-gray-700">Imagine principală curentă</div>
+                                            <img src="{{ \App\Support\MediaUrl::public($product->image) }}"
+                                                 class="h-56 w-56 rounded-2xl border border-gray-200 object-cover"
+                                                 alt="{{ $product->name }}">
+                                        </div>
+                                    @endif
+
+                                    <div id="imagePreviewWrap" class="mt-4 hidden">
+                                        <div class="mb-2 text-sm font-medium text-gray-700">Preview imagine principală nouă</div>
+                                        <img id="imagePreview"
+                                             class="h-56 w-56 rounded-2xl border border-gray-200 object-cover"
+                                             alt="Preview">
+                                    </div>
+                                </div>
+
+                                <div class="rounded-2xl border border-gray-200 p-5">
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Adaugă imagini noi în galerie
+                                    </label>
+                                    <div class="mt-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-900">
+                                        <div class="font-semibold">Pozele noi se adauga la lista curenta, nu se sterg intre selectii.</div>
+                                        <p id="gallerySelectionNote" class="mt-1 text-sm text-blue-800">
+                                            Poti selecta acum cateva imagini si apoi sa revii cu altele. Tot ce alegi ramane in lista pana scoti manual o poza.
+                                        </p>
+                                        <div id="gallerySelectionCount" class="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+                                            0/8 imagini selectate
+                                        </div>
+                                    </div>
+                                    <input id="gallery"
+                                           type="file"
+                                           name="gallery[]"
+                                           accept="image/*"
+                                           multiple
+                                           class="mt-3 block w-full text-sm text-gray-700">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Poti adauga pana la 8 imagini noi in galerie. Daca alegi alte poze dupa prima selectie, ele se adauga la lista curenta.
+                                    </p>
+
+                                    <div id="galleryPreviewWrap" class="mt-4 hidden">
+                                        <div class="mb-2 text-sm font-medium text-gray-700">Imagini noi selectate pentru galerie</div>
+                                        <div id="galleryPreviewGrid" class="grid grid-cols-2 gap-4 md:grid-cols-4"></div>
+                                    </div>
+                                </div>
+
+                                @php
+                                    $secondaryImages = $product->images->where('is_primary', false)->values();
+                                @endphp
+
+                                @if($secondaryImages->count())
+                                    <div class="rounded-2xl border border-gray-200 p-5">
+                                        <div class="mb-3 text-sm font-medium text-gray-700">Galerie existentă</div>
+                                        <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                                            @foreach($secondaryImages as $img)
+                                                <label class="block">
+                                                    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                                                        <img src="{{ \App\Support\MediaUrl::public($img->path) }}"
+                                                             alt="Gallery image"
+                                                             class="h-32 w-full object-cover">
+                                                        <div class="p-3">
+                                                            <label class="inline-flex items-center gap-2 text-sm text-red-600">
+                                                                <input type="checkbox" name="delete_gallery[]" value="{{ $img->id }}">
+                                                                <span>Șterge</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <div class="flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row">
+                                    <button type="submit"
+                                            id="submitProductBtn"
+                                            class="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                                        Salvează modificările
+                                    </button>
+
+                                    <a href="{{ route('seller.products.index') }}"
+                                       class="inline-flex items-center justify-center rounded-2xl border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                                        Anulează
+                                    </a>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
-    <script>
-        const subMap = @json($subMap);
-        const catSel = document.getElementById('category_id');
-        const subSel = document.getElementById('subcategory_id');
-        const selectedSub = @json($selectedSub);
-
-        function refreshSubcategories(selectedSubId = null) {
-            const catId = catSel.value;
-
-            subSel.innerHTML = '<option value="">— alege subcategoria —</option>';
-
-            if (!catId || !subMap[catId] || subMap[catId].length === 0) {
-                subSel.disabled = true;
-                return;
-            }
-
-            subSel.disabled = false;
-
-            subMap[catId].forEach(sc => {
-                const opt = document.createElement('option');
-                opt.value = sc.id;
-                opt.textContent = sc.name;
-
-                if (selectedSubId && String(selectedSubId) === String(sc.id)) {
-                    opt.selected = true;
-                }
-
-                subSel.appendChild(opt);
-            });
-        }
-
-        catSel.addEventListener('change', () => refreshSubcategories());
-        refreshSubcategories(selectedSub);
-
-        const imageInput = document.getElementById('image');
-        const imagePreviewWrap = document.getElementById('imagePreviewWrap');
-        const imagePreview = document.getElementById('imagePreview');
-
-        imageInput.addEventListener('change', function (e) {
-            const file = e.target.files[0];
-
-            if (!file) {
-                imagePreviewWrap.classList.add('hidden');
-                imagePreview.src = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function (event) {
-                imagePreview.src = event.target.result;
-                imagePreviewWrap.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        });
-
-        const generateBtn = document.getElementById('generateBannerBtn');
-        const clearBtn = document.getElementById('clearBannerBtn');
-        const bannerStatus = document.getElementById('bannerStatus');
-        const bannerPreviewWrap = document.getElementById('bannerPreviewWrap');
-        const bannerPreview = document.getElementById('bannerPreview');
-        const promptInput = document.getElementById('ai_banner_prompt');
-        const tempPathInput = document.getElementById('ai_generated_temp_path');
-
-        async function clearTempBannerOnServer() {
-            if (!tempPathInput.value) return;
-
-            try {
-                await fetch('{{ route('seller.products.ai_banner_preview.delete') }}', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        temp_path: tempPathInput.value
-                    })
-                });
-            } catch (e) {
-            }
-        }
-
-        function clearBannerPreviewUi() {
-            bannerPreview.src = '';
-            bannerPreviewWrap.classList.add('hidden');
-            clearBtn.classList.add('hidden');
-            tempPathInput.value = '';
-        }
-
-        clearBtn.addEventListener('click', async function () {
-            await clearTempBannerOnServer();
-            clearBannerPreviewUi();
-            bannerStatus.textContent = 'Preview banner șters.';
-        });
-
-        generateBtn.addEventListener('click', async function () {
-            const file = imageInput.files[0];
-            const prompt = promptInput.value.trim();
-
-            if (!file) {
-                bannerStatus.textContent = 'Pentru regenerare, alege o imagine în câmpul Imagine nouă.';
-                return;
-            }
-
-            if (!prompt) {
-                bannerStatus.textContent = 'Scrie mai întâi promptul pentru banner AI.';
-                return;
-            }
-
-            generateBtn.disabled = true;
-            generateBtn.textContent = 'Se generează...';
-            bannerStatus.textContent = 'Se generează bannerul AI...';
-
-            await clearTempBannerOnServer();
-            clearBannerPreviewUi();
-
-            const fd = new FormData();
-            fd.append('image', file);
-            fd.append('ai_banner_prompt', prompt);
-
-            try {
-                const response = await fetch('{{ route('seller.products.ai_banner_preview') }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: fd
-                });
-
-                const data = await response.json();
-
-                if (!response.ok || !data.ok) {
-                    throw new Error(data.message || 'Nu s-a putut genera bannerul.');
-                }
-
-                tempPathInput.value = data.temp_path;
-                bannerPreview.src = data.url;
-                bannerPreviewWrap.classList.remove('hidden');
-                clearBtn.classList.remove('hidden');
-                bannerStatus.textContent = 'Banner generat cu succes. Acum poți salva produsul.';
-            } catch (error) {
-                bannerStatus.textContent = error.message || 'Eroare la generare banner.';
-            } finally {
-                generateBtn.disabled = false;
-                generateBtn.textContent = 'Generează banner AI';
-            }
-        });
-    </script>
+    @include('seller.products.partials.create-script')
 </x-app-layout>
+
+
