@@ -295,8 +295,7 @@ class ShopController extends Controller
                 ->whereHas('sellerProfile', function ($query) use ($q) {
                     $query->where('shop_name', 'like', "%{$q}%")
                         ->orWhere('legal_name', 'like', "%{$q}%")
-                        ->orWhere('notes', 'like', "%{$q}%")
-                        ->orWhere('pickup_address', 'like', "%{$q}%");
+                        ->orWhere('notes', 'like', "%{$q}%");
                 })
                 ->with('sellerProfile')
                 ->withAvg('sellerReviewsReceived', 'rating')

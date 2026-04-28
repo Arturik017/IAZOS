@@ -8,7 +8,7 @@
     $avgRating = round((float)($product->reviews_avg_rating ?? 0), 1);
     $reviewsCount = (int)($product->reviews_count ?? 0);
     $filledStars = max(0, min(5, (int) round($avgRating)));
-    $isWishlisted = auth()->check() ? \App\Support\WishlistState::has((int) $product->id) : false;
+    $isWishlisted = \App\Support\WishlistState::has((int) $product->id);
 @endphp
 
 <div class="market-product-card group overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
@@ -45,30 +45,26 @@
             @endif
         </div>
 
-        @auth
-            <div class="absolute right-3 top-3">
-                @if($isWishlisted)
-                    <form method="POST" action="{{ route('wishlist.destroy', $product) }}" class="m-0 inline-block">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="inline-flex items-center justify-center rounded-full bg-white/90 text-red-500 ring-1 ring-black/10 backdrop-blur-sm transition hover:bg-white" style="width: 2rem; height: 2rem; padding: 0;" aria-label="Scoate din favorite">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 0.95rem; height: 0.95rem; display: block;">
-                                <path d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z"/>
-                            </svg>
-                        </button>
-                    </form>
-                @else
-                    <form method="POST" action="{{ route('wishlist.store', $product) }}" class="m-0 inline-block">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center justify-center rounded-full bg-white/90 text-gray-600 ring-1 ring-black/10 backdrop-blur-sm transition hover:bg-white hover:text-red-500" style="width: 2rem; height: 2rem; padding: 0;" aria-label="Adauga la favorite">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 0.95rem; height: 0.95rem; display: block;">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z" />
-                            </svg>
-                        </button>
-                    </form>
-                @endif
-            </div>
-        @endauth
+        <div class="absolute right-3 top-3" data-wishlist-toggle data-product-id="{{ (int) $product->id }}">
+            <form method="POST" action="{{ route('wishlist.destroy', $product) }}" class="m-0 inline-block {{ $isWishlisted ? '' : 'hidden' }}" data-wishlist-action="destroy" data-product-id="{{ (int) $product->id }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="inline-flex items-center justify-center rounded-full bg-white/90 text-red-500 ring-1 ring-black/10 backdrop-blur-sm transition hover:bg-white" style="width: 2rem; height: 2rem; padding: 0;" aria-label="Scoate din favorite">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 0.95rem; height: 0.95rem; display: block;">
+                        <path d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z"/>
+                    </svg>
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('wishlist.store', $product) }}" class="m-0 inline-block {{ $isWishlisted ? 'hidden' : '' }}" data-wishlist-action="store" data-product-id="{{ (int) $product->id }}">
+                @csrf
+                <button type="submit" class="inline-flex items-center justify-center rounded-full bg-white/90 text-gray-600 ring-1 ring-black/10 backdrop-blur-sm transition hover:bg-white hover:text-red-500" style="width: 2rem; height: 2rem; padding: 0;" aria-label="Adauga la favorite">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 0.95rem; height: 0.95rem; display: block;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z" />
+                    </svg>
+                </button>
+            </form>
+        </div>
     </div>
 
     <a href="{{ route('product.show', $product) }}" class="block p-4">

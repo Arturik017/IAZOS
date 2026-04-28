@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\GuestWishlist;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +30,9 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $cart = $request->session()->get('cart', []);
+        $guestWishlist = $request->session()->get(GuestWishlist::SESSION_KEY, []);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
@@ -44,6 +48,17 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+        $request->session()->regenerate();
+
+        if (!empty($cart)) {
+            $request->session()->put('cart', $cart);
+        }
+
+        if (!empty($guestWishlist)) {
+            $request->session()->put(GuestWishlist::SESSION_KEY, $guestWishlist);
+        }
+
+        GuestWishlist::mergeIntoUser($user);
 
         return redirect(route('dashboard', absolute: false));
     }

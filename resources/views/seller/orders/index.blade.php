@@ -50,6 +50,12 @@
                     <p class="text-sm text-gray-500">Venit net estimat</p>
                     <h3 class="mt-2 text-3xl font-bold text-emerald-600">{{ number_format((float) $netRevenue, 2, '.', ',') }} MDL</h3>
                 </div>
+
+                <div class="rounded-2xl border bg-white p-6 shadow-sm">
+                    <p class="text-sm text-gray-500">Refunduri in asteptare</p>
+                    <h3 class="mt-2 text-3xl font-bold text-amber-600">{{ $pendingRefundRequestsCount }}</h3>
+                    <div class="mt-1 text-sm text-gray-500">cereri pe care trebuie sa le decizi direct</div>
+                </div>
             </div>
 
             <div class="rounded-2xl border bg-white p-6 shadow-sm">
@@ -64,7 +70,7 @@
                     </div>
                     <div class="rounded-xl bg-gray-50 px-4 py-4">
                         <div class="text-sm font-semibold text-gray-900">Refund / anulare</div>
-                        <div class="mt-1 text-sm text-gray-600">Daca exista o cerere de refund, o vezi pe produsul respectiv si poti raspunde direct.</div>
+                        <div class="mt-1 text-sm text-gray-600">Daca exista o cerere de refund, o vezi pe produsul respectiv si decizi direct daca o aprobi sau o respingi.</div>
                     </div>
                 </div>
             </div>

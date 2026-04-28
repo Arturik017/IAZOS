@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Support\MessageState;
+use App\Support\CartState;
 use App\Support\WishlistState;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
@@ -18,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('*', function ($view) {
             $view->with('wishlistCount', WishlistState::count());
+            $view->with('cartCount', CartState::count());
             $view->with('messageUnreadCount', MessageState::unreadCount());
         });
     }

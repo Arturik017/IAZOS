@@ -46,13 +46,19 @@ class OrderController extends Controller
             })
             ->count();
 
+        $pendingRefundRequestsCount = \App\Models\RefundRequest::query()
+            ->where('seller_id', $user->id)
+            ->where('status', 'requested')
+            ->count();
+
         return view('seller.orders.index', compact(
             'orders',
             'grossRevenue',
             'paidOrdersCount',
             'commissionPercent',
             'marketplaceCommission',
-            'netRevenue'
+            'netRevenue',
+            'pendingRefundRequestsCount'
         ));
     }
 
@@ -78,6 +84,9 @@ class OrderController extends Controller
             ->firstOrFail();
 
         $myItems = $order->items->where('seller_id', $user->id);
+        $openRefundRequests = $myItems
+            ->filter(fn ($item) => $item->refundRequest && $item->refundRequest->status === 'requested')
+            ->values();
 
         $myGrossTotal = $myItems->sum(function ($item) {
             return $item->price * $item->qty;
@@ -95,7 +104,8 @@ class OrderController extends Controller
             'myGrossTotal',
             'myCommission',
             'myNetTotal',
-            'allowedStatuses'
+            'allowedStatuses',
+            'openRefundRequests'
         ));
     }
 

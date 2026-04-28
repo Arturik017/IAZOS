@@ -154,7 +154,7 @@ class CheckoutController extends Controller
                         'checkout_uuid' => $checkoutUuid,
                         'checkout_group_id' => $checkoutUuid,
                         'payment_flow' => 'seller_direct',
-                        'payment_provider' => $sellerProfile?->paymentAccount?->provider,
+                        'payment_provider' => 'maib',
                         'first_name' => $request->first_name,
                         'last_name' => $request->last_name,
                         'phone' => $request->phone,
@@ -291,7 +291,7 @@ class CheckoutController extends Controller
         }
 
         $order->update([
-            'payment_provider' => $order->seller?->sellerProfile?->paymentAccount?->provider,
+            'payment_provider' => 'maib',
             'payment_url' => $result['payment_url'] ?? null,
             'payment_reference' => $result['payment_reference'] ?? null,
             'payment_link_generated_at' => now(),

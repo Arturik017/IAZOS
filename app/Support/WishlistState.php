@@ -11,11 +11,18 @@ class WishlistState
 
     public static function items(): Collection
     {
-        if (!auth()->check()) {
-            return collect();
+        if (self::$items !== null) {
+            return self::$items;
         }
 
-        if (self::$items !== null) {
+        if (!auth()->check()) {
+            self::$items = GuestWishlist::items()
+                ->map(fn ($item) => [
+                    'product_id' => (int) $item['product_id'],
+                    'variant_id' => $item['variant_id'] ? (int) $item['variant_id'] : null,
+                ])
+                ->values();
+
             return self::$items;
         }
 
@@ -34,7 +41,11 @@ class WishlistState
     public static function ids(): Collection
     {
         if (!auth()->check()) {
-            return collect();
+            return self::items()
+                ->pluck('product_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
         }
 
         if (self::$ids !== null) {

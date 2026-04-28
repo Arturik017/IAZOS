@@ -83,9 +83,9 @@
 
                 $refundStatusPretty = [
                     'requested' => 'Trimisa de client',
-                    'seller_reviewed' => 'Are raspuns seller',
-                    'approved' => 'Aprobata de admin',
-                    'rejected' => 'Respinsa de admin',
+                    'seller_reviewed' => 'Raspuns seller (istoric)',
+                    'approved' => 'Aprobata de seller',
+                    'rejected' => 'Respinsa de seller',
                 ];
             @endphp
 
@@ -288,8 +288,12 @@
                                                         <div class="mt-2 text-xs">Raspuns seller: {{ $item->refundRequest->seller_response }}</div>
                                                     @endif
                                                     @if($item->refundRequest->admin_decision_note)
-                                                        <div class="mt-2 text-xs">Nota admin: {{ $item->refundRequest->admin_decision_note }}</div>
+                                                        <div class="mt-2 text-xs">Nota admin (interventie): {{ $item->refundRequest->admin_decision_note }}</div>
                                                     @endif
+                                                </div>
+                                            @elseif(($order->payment_status ?? 'unpaid') !== 'paid')
+                                                <div class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                                                    Refund-ul este disponibil doar dupa confirmarea platii pentru aceasta comanda.
                                                 </div>
                                             @elseif(!in_array($item->financial_status, ['cancelled', 'refunded'], true))
                                                 <form method="POST"
@@ -304,7 +308,7 @@
                                                         </select>
                                                         <input name="client_reason" required placeholder="Motiv scurt" class="rounded-xl border-gray-300 text-sm">
                                                     </div>
-                                                    <textarea name="client_note" rows="3" placeholder="Explica pe scurt problema pentru seller si admin" class="w-full rounded-xl border-gray-300 text-sm"></textarea>
+                                                    <textarea name="client_note" rows="3" placeholder="Explica pe scurt problema pentru seller" class="w-full rounded-xl border-gray-300 text-sm"></textarea>
                                                     <button class="inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
                                                         Solicita refund
                                                     </button>

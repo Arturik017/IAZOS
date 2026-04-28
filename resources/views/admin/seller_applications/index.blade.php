@@ -110,11 +110,8 @@
                                 <div><span class="font-semibold text-gray-900">Email:</span> {{ $app->email }}</div>
                                 <div><span class="font-semibold text-gray-900">Telefon:</span> {{ $app->phone ?: '—' }}</div>
                                 <div><span class="font-semibold text-gray-900">Legal name:</span> {{ $app->legal_name ?: '—' }}</div>
-                                <div><span class="font-semibold text-gray-900">Tip seller:</span> {{ $app->seller_type ?: '—' }}</div>
                                 <div><span class="font-semibold text-gray-900">Livrare:</span> {{ $app->delivery_type ?: '—' }}</div>
-                                <div class="md:col-span-2 xl:col-span-3"><span class="font-semibold text-gray-900">Adresa ridicare:</span> {{ $app->pickup_address ?: '—' }}</div>
                                 <div><span class="font-semibold text-gray-900">Curier:</span> {{ $app->courier_company ?: '—' }}</div>
-                                <div><span class="font-semibold text-gray-900">IDNP:</span> {{ $app->idnp ?: '—' }}</div>
                                 <div><span class="font-semibold text-gray-900">IDNO:</span> {{ $app->company_idno ?: '—' }}</div>
                             </div>
 
@@ -136,7 +133,7 @@
                                 <div class="font-semibold text-emerald-900 mb-2">Date pentru plati online</div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                                     <div><span class="font-semibold text-gray-900">Activate online:</span> {{ $app->has_online_payments_enabled ? 'Da' : 'Nu' }}</div>
-                                    <div><span class="font-semibold text-gray-900">Provider:</span> {{ $app->payment_provider ?: 'none' }}</div>
+                                    <div><span class="font-semibold text-gray-900">Procesator:</span> MAIB</div>
                                     <div><span class="font-semibold text-gray-900">Contact plati:</span> {{ $app->payment_contact_email ?: '—' }}</div>
                                     <div><span class="font-semibold text-gray-900">Merchant ID:</span> {{ $app->merchant_id ?: '—' }}</div>
                                     <div><span class="font-semibold text-gray-900">Terminal ID:</span> {{ $app->terminal_id ?: '—' }}</div>

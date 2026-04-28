@@ -25,9 +25,9 @@
 
         $refundRequestLabels = [
             'requested' => 'Clientul a trimis cererea',
-            'seller_reviewed' => 'Ai raspuns deja',
-            'approved' => 'Aprobata de admin',
-            'rejected' => 'Respinsa de admin',
+            'seller_reviewed' => 'Raspuns seller (istoric)',
+            'approved' => 'Aprobata de tine',
+            'rejected' => 'Respinsa de tine',
         ];
     @endphp
 
@@ -133,6 +133,82 @@
                     </div>
                 </div>
 
+                @if($openRefundRequests->isNotEmpty())
+                    <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <h4 class="text-base font-semibold text-amber-900">Cereri de refund care asteapta decizia ta</h4>
+                                <p class="mt-1 text-sm text-amber-800">Clientul a trimis o cerere. Tu decizi direct daca aprobi sau respingi.</p>
+                            </div>
+                            <div class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-amber-900">
+                                {{ $openRefundRequests->count() }} active
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid gap-4 xl:grid-cols-2">
+                            @foreach($openRefundRequests as $item)
+                                <div class="rounded-2xl border border-amber-200 bg-white p-4">
+                                    <div class="font-semibold text-gray-900">{{ $item->product_name }}</div>
+                                    @if(!empty($item->variant_label))
+                                        <div class="mt-1 text-xs font-medium text-blue-700">{{ $item->variant_label }}</div>
+                                    @endif
+
+                                    <div class="mt-3 space-y-2 text-sm text-gray-700">
+                                        <div><span class="font-medium text-gray-900">Tip cerere:</span> {{ $item->refundRequest->target_status === 'cancelled' ? 'Anulare' : 'Rambursare' }}</div>
+                                        <div><span class="font-medium text-gray-900">Status:</span> {{ $refundRequestLabels[$item->refundRequest->status] ?? $item->refundRequest->status }}</div>
+                                        <div><span class="font-medium text-gray-900">Motiv client:</span> {{ $item->refundRequest->client_reason }}</div>
+                                        @if($item->refundRequest->client_note)
+                                            <div><span class="font-medium text-gray-900">Detalii client:</span> {{ $item->refundRequest->client_note }}</div>
+                                        @endif
+                                    </div>
+
+                                    <div class="mt-4 grid gap-3 md:grid-cols-2">
+                                        <form method="POST" action="{{ route('seller.refund_requests.respond', $item->refundRequest) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="decision" value="approve">
+                                            <input type="hidden" name="resolved_financial_status" value="{{ $item->refundRequest->target_status }}">
+                                            <input type="hidden" name="seller_response" value="Sellerul a verificat cererea si o aproba.">
+                                            <button class="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
+                                                Aproba cererea clientului
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('seller.refund_requests.respond', $item->refundRequest) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="decision" value="reject">
+                                            <input type="hidden" name="seller_response" value="Sellerul a verificat cererea si nu o aproba.">
+                                            <button class="inline-flex w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+                                                Respinge cererea
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <form method="POST"
+                                          action="{{ route('seller.refund_requests.respond', $item->refundRequest) }}"
+                                        class="mt-4 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                                        @csrf
+                                        @method('PATCH')
+                                        <select name="decision" class="w-full rounded-lg border px-3 py-2 text-xs">
+                                            <option value="approve">Aprob cererea clientului</option>
+                                            <option value="reject">Respinge cererea clientului</option>
+                                        </select>
+                                        <select name="resolved_financial_status" class="w-full rounded-lg border px-3 py-2 text-xs">
+                                            <option value="refunded">Marcheaza ca refund</option>
+                                            <option value="cancelled">Marcheaza ca anulare</option>
+                                        </select>
+                                        <textarea name="seller_response" rows="3" required placeholder="Scrie clar ce ai verificat si decizia pe care o iei." class="w-full rounded-lg border px-3 py-2 text-xs"></textarea>
+                                        <button class="w-full rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white hover:bg-black">
+                                            Salveaza decizia
+                                        </button>
+                                    </form>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 <div class="mt-5 overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="bg-gray-50 text-gray-700">
@@ -210,8 +286,8 @@
                                                 @if($item->refundRequest->client_note)
                                                     <div>Detalii client: {{ $item->refundRequest->client_note }}</div>
                                                 @endif
-                                                @if($item->refundRequest->admin_decision_note)
-                                                    <div>Nota admin: {{ $item->refundRequest->admin_decision_note }}</div>
+                                                @if($item->refundRequest->seller_response)
+                                                    <div>Decizia ta: {{ $item->refundRequest->seller_response }}</div>
                                                 @endif
                                             </div>
                                         @endif
@@ -238,19 +314,23 @@
                                             </button>
                                         </form>
 
-                                        @if($item->refundRequest && !in_array($item->refundRequest->status, ['approved', 'rejected'], true))
+                                        @if($item->refundRequest && $item->refundRequest->status === 'requested')
                                             <form method="POST"
                                                   action="{{ route('seller.refund_requests.respond', $item->refundRequest) }}"
                                                   class="mt-3 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
                                                 @csrf
                                                 @method('PATCH')
-                                                <select name="seller_recommended_status" class="w-full rounded-lg border px-3 py-2 text-xs">
-                                                    <option value="cancelled">Recomand anulare</option>
-                                                    <option value="refunded">Recomand refund</option>
+                                                <select name="decision" class="w-full rounded-lg border px-3 py-2 text-xs">
+                                                    <option value="approve">Aprob cererea clientului</option>
+                                                    <option value="reject">Respinge cererea clientului</option>
                                                 </select>
-                                                <textarea name="seller_response" rows="3" required placeholder="Spune adminului si clientului ce ai verificat" class="w-full rounded-lg border px-3 py-2 text-xs"></textarea>
+                                                <select name="resolved_financial_status" class="w-full rounded-lg border px-3 py-2 text-xs">
+                                                    <option value="cancelled">Marcheaza ca anulare</option>
+                                                    <option value="refunded">Marcheaza ca refund</option>
+                                                </select>
+                                                <textarea name="seller_response" rows="3" required placeholder="Spune clientului ce ai verificat si decizia ta." class="w-full rounded-lg border px-3 py-2 text-xs"></textarea>
                                                 <button class="w-full rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white hover:bg-black">
-                                                    Trimite raspuns
+                                                    Salveaza decizia
                                                 </button>
                                             </form>
                                         @endif

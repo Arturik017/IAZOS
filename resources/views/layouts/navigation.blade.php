@@ -82,8 +82,13 @@
                         @endif
                     </a>
 
-                    <a href="{{ route('cart.index') }}" class="hidden sm:inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50">
+                    <a href="{{ route('cart.index') }}" class="relative hidden sm:inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50">
                         Cos
+                        @if(($cartCount ?? 0) > 0)
+                            <span class="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-gray-900 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                                {{ $cartCount }}
+                            </span>
+                        @endif
                     </a>
 
                     <x-dropdown align="right" width="48">
@@ -123,6 +128,27 @@
                         </x-slot>
                     </x-dropdown>
                 @else
+                    <a href="{{ route('wishlist.index') }}" class="relative hidden sm:inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z" />
+                        </svg>
+                        Favorite
+                        @if(($wishlistCount ?? 0) > 0)
+                            <span class="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-gray-900 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                                {{ $wishlistCount }}
+                            </span>
+                        @endif
+                    </a>
+
+                    <a href="{{ route('cart.index') }}" class="relative hidden sm:inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50">
+                        Cos
+                        @if(($cartCount ?? 0) > 0)
+                            <span class="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-gray-900 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                                {{ $cartCount }}
+                            </span>
+                        @endif
+                    </a>
+
                     <a href="{{ route('login') }}" class="hidden sm:inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50">
                         Logare
                     </a>
@@ -173,6 +199,14 @@
 
                 <x-responsive-nav-link :href="route('wishlist.index')" :active="request()->routeIs('wishlist.*')">
                     Favorite @if(($wishlistCount ?? 0) > 0) ({{ $wishlistCount }}) @endif
+                </x-responsive-nav-link>
+            @else
+                <x-responsive-nav-link :href="route('wishlist.index')" :active="request()->routeIs('wishlist.*')">
+                    Favorite @if(($wishlistCount ?? 0) > 0) ({{ $wishlistCount }}) @endif
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('cart.index')" :active="request()->routeIs('cart.*')">
+                    Cos @if(($cartCount ?? 0) > 0) ({{ $cartCount }}) @endif
                 </x-responsive-nav-link>
             @endauth
 

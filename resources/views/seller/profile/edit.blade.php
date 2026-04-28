@@ -76,23 +76,9 @@
                         <input name="phone" value="{{ old('phone', $profile->phone) }}" class="mt-1 border w-full p-2 rounded">
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Adresa ridicare</label>
-                        <input name="pickup_address" value="{{ old('pickup_address', $profile->pickup_address) }}" class="mt-1 border w-full p-2 rounded">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Tip seller</label>
-                        <select name="seller_type" class="mt-1 border w-full p-2 rounded">
-                            <option value="individual" @selected(old('seller_type', $profile->seller_type) === 'individual')>Persoana fizica</option>
-                            <option value="freelancer" @selected(old('seller_type', $profile->seller_type) === 'freelancer')>Freelancer</option>
-                            <option value="company" @selected(old('seller_type', $profile->seller_type) === 'company')>Companie</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">IDNP</label>
-                        <input name="idnp" value="{{ old('idnp', $profile->idnp) }}" class="mt-1 border w-full p-2 rounded">
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                        <div class="text-sm font-medium text-gray-700">Tip seller</div>
+                        <div class="mt-1 text-sm text-gray-900">Companie</div>
                     </div>
 
                     <div>
@@ -134,18 +120,16 @@
 
                         <div class="mt-4 space-y-4">
                             <label class="inline-flex items-center gap-3 text-sm font-medium text-gray-800">
-                                <input type="checkbox" name="has_online_payments_enabled" value="1" class="rounded border-gray-300" @checked(old('has_online_payments_enabled', ($paymentAccount->provider ?? 'none') !== 'none'))>
+                                <input type="checkbox" name="has_online_payments_enabled" value="1" class="rounded border-gray-300" @checked(old('has_online_payments_enabled', filled($paymentAccount->merchant_id) || filled($paymentAccount->api_key) || filled($paymentAccount->secret_key)))>
                                 <span>Am platile online activate si vreau sa primesc plata direct de la clienti</span>
                             </label>
 
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">Payment provider</label>
-                                    <select name="payment_provider" class="mt-1 border w-full p-2 rounded">
-                                        <option value="none" @selected(old('payment_provider', $paymentAccount->provider ?? 'none') === 'none')>none</option>
-                                        <option value="maib" @selected(old('payment_provider', $paymentAccount->provider) === 'maib')>maib</option>
-                                        <option value="paynet" @selected(old('payment_provider', $paymentAccount->provider) === 'paynet')>paynet</option>
-                                    </select>
+                                    <label class="block text-sm font-medium text-gray-700">Procesator de plati</label>
+                                    <div class="mt-1 rounded border bg-white p-2 text-sm text-gray-900">
+                                        MAIB
+                                    </div>
                                 </div>
 
                                 <div>

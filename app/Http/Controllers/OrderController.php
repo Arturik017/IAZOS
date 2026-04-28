@@ -32,6 +32,8 @@ class OrderController extends Controller
         $grouped = $orders->groupBy(fn ($o) => $o->status ?? 'unknown');
 
         $statusOrder = [
+            'pending_payment',
+            'paid',
             'new',
             'confirmed',
             'processing',

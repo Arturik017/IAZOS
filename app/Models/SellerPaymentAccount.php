@@ -9,7 +9,6 @@ class SellerPaymentAccount extends Model
 {
     protected $fillable = [
         'seller_profile_id',
-        'provider',
         'merchant_id',
         'terminal_id',
         'api_key',
@@ -38,7 +37,6 @@ class SellerPaymentAccount extends Model
     {
         return $this->status === 'active'
             && $this->is_active
-            && filled($this->provider)
             && filled($this->merchant_id)
             && filled($this->api_key)
             && filled($this->secret_key);

@@ -3,15 +3,15 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">Coșul meu</h2>
+                <h2 class="text-2xl font-bold text-gray-900">Cosul meu</h2>
                 <p class="text-sm text-gray-500">
-                    Verifică produsele înainte de checkout.
+                    Verifica produsele inainte de checkout.
                 </p>
             </div>
 
             <a href="{{ route('home') }}"
                class="text-sm font-semibold text-gray-700 hover:text-gray-900">
-                ← Înapoi la magazin
+                &larr; Inapoi la magazin
             </a>
         </div>
     </x-slot>
@@ -34,10 +34,10 @@
             @if(empty($cart))
                 <div class="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow">
                     <div class="text-lg font-semibold text-gray-900">
-                        Coșul este gol.
+                        Cosul este gol.
                     </div>
                     <div class="mt-1 text-sm text-gray-500">
-                        Adaugă produse din magazin.
+                        Adauga produse din magazin.
                     </div>
 
                     <a href="{{ route('home') }}"
@@ -66,7 +66,7 @@
                                             >
                                         @else
                                             <div class="w-full h-28 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-sm text-gray-400">
-                                                Fără imagine
+                                                Fara imagine
                                             </div>
                                         @endif
                                     </div>
@@ -85,7 +85,7 @@
                                                 @endif
 
                                                 <p class="mt-2 text-sm text-gray-500">
-                                                    Preț:
+                                                    Pret:
                                                     <span class="font-semibold text-gray-900">
                                                         {{ number_format($item['price'], 2) }} MDL
                                                     </span>
@@ -107,7 +107,7 @@
                                         <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                                             <form method="POST"
                                                   action="{{ route('cart.update', $rowId) }}"
-                                                  class="flex items-center gap-2">
+                                                  class="cart-update-form flex items-center gap-2">
                                                 @csrf
 
                                                 <label class="text-sm text-gray-600">
@@ -120,13 +120,12 @@
                                                     min="1"
                                                     max="{{ $item['stock'] }}"
                                                     value="{{ $item['qty'] }}"
-                                                    class="w-24 rounded-lg border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+                                                    class="cart-qty-input w-24 rounded-lg border-gray-300 focus:border-gray-400 focus:ring-gray-400"
                                                 />
 
-                                                <button
-                                                    class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black transition">
-                                                    Actualizează
-                                                </button>
+                                                <span class="cart-update-state hidden text-xs font-medium text-gray-500">
+                                                    Se actualizeaza...
+                                                </span>
                                             </form>
 
                                             <form method="POST"
@@ -134,7 +133,7 @@
                                                 @csrf
                                                 <button
                                                     class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">
-                                                    Șterge
+                                                    Sterge
                                                 </button>
                                             </form>
                                         </div>
@@ -146,7 +145,7 @@
 
                     <div class="h-fit rounded-2xl border border-gray-100 bg-white p-6 shadow">
                         <h3 class="text-lg font-bold text-gray-900">
-                            Sumar comandă
+                            Sumar comanda
                         </h3>
 
                         <div class="mt-4 space-y-2 text-sm">
@@ -163,7 +162,7 @@
                             </div>
 
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Vamă</span>
+                                <span class="text-gray-600">Vama</span>
                                 <span class="font-semibold text-green-700">Inclus</span>
                             </div>
                         </div>
@@ -179,7 +178,7 @@
 
                         <a href="{{ auth()->check() ? route('checkout.index') : route('register') }}"
                            class="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-gray-900 px-4 py-3 font-semibold text-white hover:bg-black transition">
-                            Finalizează comanda
+                            Finalizeaza comanda
                         </a>
 
                         <form method="POST"
@@ -188,12 +187,12 @@
                             @csrf
                             <button
                                 class="w-full rounded-xl bg-gray-100 px-5 py-3 font-semibold text-gray-900 hover:bg-gray-200 transition">
-                                Golește coșul
+                                Goleste cosul
                             </button>
                         </form>
 
                         <p class="mt-4 text-xs text-gray-400">
-                            În pasul următor colectăm datele de livrare și confirmăm comanda.
+                            In pasul urmator colectam datele de livrare si confirmam comanda.
                         </p>
                     </div>
 
@@ -203,3 +202,37 @@
     </div>
 
 </x-app-layout>
+
+<script>
+    (function () {
+        const forms = document.querySelectorAll('.cart-update-form');
+
+        forms.forEach((form) => {
+            const input = form.querySelector('.cart-qty-input');
+            const state = form.querySelector('.cart-update-state');
+            let submitted = false;
+
+            if (!input) {
+                return;
+            }
+
+            const submitForm = () => {
+                if (submitted) {
+                    return;
+                }
+
+                submitted = true;
+
+                if (state) {
+                    state.classList.remove('hidden');
+                }
+
+                input.setAttribute('readonly', 'readonly');
+                form.requestSubmit();
+            };
+
+            input.addEventListener('change', submitForm);
+            input.addEventListener('blur', submitForm);
+        });
+    })();
+</script>

@@ -47,6 +47,12 @@
                 <p class="mt-2 text-sm leading-6">
                     Pentru transparenta si siguranta, fiecare vanzator incaseaza direct plata pentru produsele sale. De aceea, comanda ta a fost impartita in plati separate.
                 </p>
+                @if(!$allPaid)
+                    <div class="mt-4 rounded-2xl border border-amber-300 bg-white/80 px-4 py-4 text-sm text-amber-900">
+                        Nu inchide acest pas pana nu verifici toate cardurile de mai jos. Daca iesi din pagina, nu pierzi comenzile:
+                        le gasesti in <span class="font-semibold">Comenzile mele</span>, iar pentru cele neachitate vei vedea butonul <span class="font-semibold">Continua platile</span>.
+                    </div>
+                @endif
             </div>
 
             <div class="grid gap-6 xl:grid-cols-2">
@@ -167,4 +173,43 @@
             @endif
         </div>
     </div>
+
+    @if(!$allPaid)
+        <script>
+            (function () {
+                let allowLeave = false;
+
+                document.querySelectorAll('form').forEach(function (form) {
+                    form.addEventListener('submit', function () {
+                        allowLeave = true;
+                    });
+                });
+
+                window.addEventListener('beforeunload', function (event) {
+                    if (allowLeave) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.returnValue = '';
+                });
+
+                document.querySelectorAll('a[href]').forEach(function (link) {
+                    link.addEventListener('click', function (event) {
+                        const href = link.getAttribute('href') || '';
+
+                        if (!href || href.startsWith('#') || allowLeave) {
+                            return;
+                        }
+
+                        const confirmed = window.confirm('Ai plati nefinalizate in acest checkout. Daca iesi acum, comenzile raman salvate si le poti continua din "Comenzile mele". Vrei sa parasesti pagina?');
+
+                        if (!confirmed) {
+                            event.preventDefault();
+                        }
+                    });
+                });
+            })();
+        </script>
+    @endif
 </x-app-layout>

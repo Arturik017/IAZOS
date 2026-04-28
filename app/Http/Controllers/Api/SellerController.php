@@ -33,8 +33,7 @@ class SellerController extends Controller
                         ->orWhereHas('sellerProfile', function ($profileQuery) use ($q) {
                             $profileQuery->where('shop_name', 'like', "%{$q}%")
                                 ->orWhere('legal_name', 'like', "%{$q}%")
-                                ->orWhere('notes', 'like', "%{$q}%")
-                                ->orWhere('pickup_address', 'like', "%{$q}%");
+                                ->orWhere('notes', 'like', "%{$q}%");
                         });
                 });
             })
@@ -95,8 +94,6 @@ class SellerController extends Controller
                 'avatar_url' => MediaUrl::public($user->sellerProfile->avatar_path ?? null),
                 'legal_name' => $user->sellerProfile->legal_name ?? null,
                 'phone' => $user->sellerProfile->phone ?? null,
-                'pickup_address' => $user->sellerProfile->pickup_address ?? null,
-                'seller_type' => $user->sellerProfile->seller_type ?? null,
                 'delivery_type' => $user->sellerProfile->delivery_type ?? null,
                 'notes' => $user->sellerProfile->notes ?? null,
                 'followers_count' => (int) ($user->followers_count ?? 0),
@@ -143,8 +140,6 @@ class SellerController extends Controller
             'shop_name' => $seller->sellerProfile->shop_name ?? null,
             'avatar_url' => MediaUrl::public($seller->sellerProfile->avatar_path ?? null),
             'legal_name' => $seller->sellerProfile->legal_name ?? null,
-            'pickup_address' => $seller->sellerProfile->pickup_address ?? null,
-            'seller_type' => $seller->sellerProfile->seller_type ?? null,
             'delivery_type' => $seller->sellerProfile->delivery_type ?? null,
             'followers_count' => (int) ($seller->followers_count ?? 0),
             'is_following' => $isFollowing,

@@ -23,10 +23,6 @@ class PaymentLinkService
             throw new \RuntimeException('Acest vanzator nu are inca platile online activate.');
         }
 
-        return match ($paymentAccount->provider) {
-            'maib' => $this->maibSellerPaymentService->createPaymentUrl($order, $paymentAccount),
-            'paynet' => throw new \RuntimeException('Integrarea Paynet pentru selleri este pregatita ca structura, dar mai are nevoie de configurarea API-ului final.'),
-            default => throw new \RuntimeException('Providerul de plati al vanzatorului nu este configurat corect.'),
-        };
+        return $this->maibSellerPaymentService->createPaymentUrl($order, $paymentAccount);
     }
 }

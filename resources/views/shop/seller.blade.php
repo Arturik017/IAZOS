@@ -514,22 +514,10 @@
                             {{ $sellerProfile->shop_name ?: '—' }}
                         </div>
 
-                        <div>
-                            <span class="font-semibold text-gray-900">Tip seller:</span>
-                            {{ $sellerProfile->seller_type ?: '—' }}
-                        </div>
-
                         @if($sellerProfile->phone)
                             <div>
                                 <span class="font-semibold text-gray-900">Telefon:</span>
                                 {{ $sellerProfile->phone }}
-                            </div>
-                        @endif
-
-                        @if($sellerProfile->pickup_address)
-                            <div>
-                                <span class="font-semibold text-gray-900">Adresa:</span>
-                                {{ $sellerProfile->pickup_address }}
                             </div>
                         @endif
                     </div>

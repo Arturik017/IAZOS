@@ -31,7 +31,6 @@ class SellerController extends Controller
             'user_id' => $user->id,
             'shop_name' => $user->name . ' Shop',
             'phone' => null,
-            'pickup_address' => null,
         ]);
 
         return back()->with('success', 'Cererea a fost trimisă. Așteaptă aprobare.');

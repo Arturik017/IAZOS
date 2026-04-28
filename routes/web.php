@@ -77,13 +77,14 @@ Route::get('/search', [ShopController::class, 'search'])->name('search');
 Route::post('/products/{product}/questions', [ProductQuestionController::class, 'store'])
     ->name('products.questions.store');
 
+Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+Route::post('/wishlist/move-to-cart', [WishlistController::class, 'moveToCart'])->name('wishlist.move_to_cart');
+Route::post('/wishlist/{product}', [WishlistController::class, 'store'])->name('wishlist.store');
+Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
+
 Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/review', [ProductReviewController::class, 'store'])
         ->name('products.review.store');
-    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
-    Route::post('/wishlist/move-to-cart', [WishlistController::class, 'moveToCart'])->name('wishlist.move_to_cart');
-    Route::post('/wishlist/{product}', [WishlistController::class, 'store'])->name('wishlist.store');
-    Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/messages/admin', [MessageController::class, 'startAdmin'])->name('messages.start_admin');
     Route::post('/messages/seller/{user}', [MessageController::class, 'startSeller'])->name('messages.start_seller');

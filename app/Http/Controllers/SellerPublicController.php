@@ -33,9 +33,7 @@ class SellerPublicController extends Controller
                         ->orWhereHas('sellerProfile', function ($sellerProfileQuery) use ($q) {
                             $sellerProfileQuery->where('shop_name', 'like', "%{$q}%")
                                 ->orWhere('legal_name', 'like', "%{$q}%")
-                                ->orWhere('notes', 'like', "%{$q}%")
-                                ->orWhere('pickup_address', 'like', "%{$q}%")
-                                ->orWhere('seller_type', 'like', "%{$q}%");
+                                ->orWhere('notes', 'like', "%{$q}%");
                         });
                 });
             })

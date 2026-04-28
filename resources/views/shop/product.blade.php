@@ -28,16 +28,14 @@
         $sellerInitial = strtoupper(mb_substr($product->seller?->sellerProfile?->shop_name ?? $product->seller?->name ?? 'S', 0, 1));
         $sellerStoryIds = collect($sellerActiveStoryIds ?? [])->values()->all();
         $sellerHasStories = count($sellerStoryIds) > 0;
-        $isWishlisted = auth()->check() ? \App\Support\WishlistState::has((int) $product->id) : false;
-        $wishlistedVariantIds = auth()->check()
-            ? \App\Support\WishlistState::items()
-                ->where('product_id', (int) $product->id)
-                ->pluck('variant_id')
-                ->filter()
-                ->map(fn ($id) => (int) $id)
-                ->values()
-                ->all()
-            : [];
+        $isWishlisted = \App\Support\WishlistState::has((int) $product->id);
+        $wishlistedVariantIds = \App\Support\WishlistState::items()
+            ->where('product_id', (int) $product->id)
+            ->pluck('variant_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
     @endphp
 
     <div class="market-page py-10">
@@ -293,36 +291,34 @@
                                     </form>
                                 </div>
 
-                                @auth
-                                    <div class="mt-3">
-                                        <form method="POST" action="{{ route('wishlist.store', $product) }}" id="wishlistStoreForm" class="{{ $hasVariants ? '' : ($isWishlisted ? 'hidden' : '') }}">
-                                            @csrf
-                                            @if($hasVariants)
-                                                <input type="hidden" name="variant_id" id="wishlistStoreVariantId">
-                                            @endif
-                                            <button type="submit" id="wishlistStoreBtn" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50" {{ $hasVariants ? 'disabled' : '' }}>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z" />
-                                                </svg>
-                                                <span id="wishlistStoreText">{{ $hasVariants ? 'Alege varianta pentru favorite' : 'Adauga la favorite' }}</span>
-                                            </button>
-                                        </form>
+                                <div class="mt-3">
+                                    <form method="POST" action="{{ route('wishlist.store', $product) }}" id="wishlistStoreForm" class="{{ $hasVariants ? '' : ($isWishlisted ? 'hidden' : '') }}">
+                                        @csrf
+                                        @if($hasVariants)
+                                            <input type="hidden" name="variant_id" id="wishlistStoreVariantId">
+                                        @endif
+                                        <button type="submit" id="wishlistStoreBtn" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z" />
+                                            </svg>
+                                            <span id="wishlistStoreText">{{ $hasVariants ? 'Adauga la favorite' : 'Adauga la favorite' }}</span>
+                                        </button>
+                                    </form>
 
-                                        <form method="POST" action="{{ route('wishlist.destroy', $product) }}" id="wishlistDestroyForm" class="{{ $hasVariants ? 'hidden' : ($isWishlisted ? '' : 'hidden') }}">
-                                            @csrf
-                                            @method('DELETE')
-                                            @if($hasVariants)
-                                                <input type="hidden" name="variant_id" id="wishlistDestroyVariantId">
-                                            @endif
-                                            <button type="submit" id="wishlistDestroyBtn" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 hover:bg-gray-50" {{ $hasVariants ? 'disabled' : '' }}>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z"/>
-                                                </svg>
-                                                Scoate din favorite
-                                            </button>
-                                        </form>
-                                    </div>
-                                @endauth
+                                    <form method="POST" action="{{ route('wishlist.destroy', $product) }}" id="wishlistDestroyForm" class="{{ $hasVariants ? 'hidden' : ($isWishlisted ? '' : 'hidden') }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        @if($hasVariants)
+                                            <input type="hidden" name="variant_id" id="wishlistDestroyVariantId">
+                                        @endif
+                                        <button type="submit" id="wishlistDestroyBtn" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 hover:bg-gray-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="m11.995 21.438-.317-.286C5.51 15.607 1.5 11.978 1.5 7.5a5.25 5.25 0 0 1 9.554-3.071L12 5.746l.946-1.317A5.25 5.25 0 0 1 22.5 7.5c0 4.478-4.01 8.107-10.178 13.652l-.327.286Z"/>
+                                            </svg>
+                                            Scoate din favorite
+                                        </button>
+                                    </form>
+                                </div>
 
                                 @if($hasVariants)
                                     <div id="variantHelpText" class="mt-3 text-xs text-amber-600 font-medium">
@@ -613,9 +609,6 @@
                 if (!variantId) {
                     wishlistStoreForm.classList.remove('hidden');
                     wishlistDestroyForm.classList.add('hidden');
-                    wishlistStoreBtn.disabled = true;
-                    wishlistDestroyBtn.disabled = true;
-
                     if (wishlistStoreVariantId) {
                         wishlistStoreVariantId.value = '';
                     }
@@ -625,7 +618,7 @@
                     }
 
                     if (wishlistStoreText) {
-                        wishlistStoreText.textContent = 'Alege varianta pentru favorite';
+                    wishlistStoreText.textContent = 'Adauga la favorite';
                     }
 
                     return;
@@ -641,9 +634,6 @@
                 if (wishlistDestroyVariantId) {
                     wishlistDestroyVariantId.value = numericVariantId;
                 }
-
-                wishlistStoreBtn.disabled = false;
-                wishlistDestroyBtn.disabled = false;
 
                 if (alreadyWishlisted) {
                     wishlistStoreForm.classList.add('hidden');
@@ -732,7 +722,6 @@
             addToCartForm.addEventListener('submit', requireVariantBeforeSubmit);
             buyNowForm.addEventListener('submit', requireVariantBeforeSubmit);
 
-            setButtonsDisabled(true);
             syncWishlistState('');
         </script>
     @endif

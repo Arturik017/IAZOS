@@ -28,8 +28,7 @@ class SellerApplicationAdminController extends Controller
                         ->orWhere('email', 'like', "%{$q}%")
                         ->orWhere('shop_name', 'like', "%{$q}%")
                         ->orWhere('legal_name', 'like', "%{$q}%")
-                        ->orWhere('phone', 'like', "%{$q}%")
-                        ->orWhere('pickup_address', 'like', "%{$q}%");
+                        ->orWhere('phone', 'like', "%{$q}%");
                 });
             })
             ->when(in_array($status, ['pending', 'approved', 'rejected'], true), function ($query) use ($status) {
@@ -100,9 +99,6 @@ class SellerApplicationAdminController extends Controller
         $profile->shop_name = $app->shop_name;
         $profile->legal_name = $app->legal_name;
         $profile->phone = $app->phone;
-        $profile->pickup_address = $app->pickup_address;
-        $profile->seller_type = $app->seller_type;
-        $profile->idnp = $app->idnp;
         $profile->company_idno = $app->company_idno;
         $profile->delivery_type = $app->delivery_type;
         $profile->courier_company = $app->courier_company;
@@ -121,9 +117,7 @@ class SellerApplicationAdminController extends Controller
         $paymentIsActive = false;
 
         if ($app->has_online_payments_enabled) {
-            $hasCorePaymentData = filled($app->payment_provider)
-                && $app->payment_provider !== 'none'
-                && filled($app->merchant_id)
+            $hasCorePaymentData = filled($app->merchant_id)
                 && filled($app->api_key)
                 && filled($app->secret_key);
 
@@ -133,7 +127,6 @@ class SellerApplicationAdminController extends Controller
         SellerPaymentAccount::updateOrCreate(
             ['seller_profile_id' => $profile->id],
             [
-                'provider' => $app->has_online_payments_enabled ? $app->payment_provider : 'none',
                 'merchant_id' => $app->merchant_id,
                 'terminal_id' => $app->terminal_id,
                 'api_key' => $app->api_key,

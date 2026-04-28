@@ -58,32 +58,14 @@
                         <input type="text" name="legal_name" value="{{ old('legal_name') }}" class="w-full rounded-xl border-gray-300">
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-700">Tip seller</label>
-                            <select name="seller_type" class="w-full rounded-xl border-gray-300" required>
-                                <option value="individual" @selected(old('seller_type') === 'individual')>Persoana fizica</option>
-                                <option value="freelancer" @selected(old('seller_type') === 'freelancer')>Freelancer</option>
-                                <option value="company" @selected(old('seller_type') === 'company')>Companie</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-700">Adresa de ridicare</label>
-                            <input type="text" name="pickup_address" value="{{ old('pickup_address') }}" class="w-full rounded-xl border-gray-300">
-                        </div>
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                        <div class="text-sm font-medium text-gray-700">Tip seller</div>
+                        <div class="mt-1 text-sm text-gray-900">Companie</div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-700">IDNP pentru persoana fizica / freelancer</label>
-                            <input type="text" name="idnp" value="{{ old('idnp') }}" class="w-full rounded-xl border-gray-300">
-                        </div>
-
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-700">IDNO pentru companie</label>
-                            <input type="text" name="company_idno" value="{{ old('company_idno') }}" class="w-full rounded-xl border-gray-300">
-                        </div>
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">IDNO pentru companie</label>
+                        <input type="text" name="company_idno" value="{{ old('company_idno') }}" class="w-full rounded-xl border-gray-300" required>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -127,12 +109,10 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block mb-2 text-sm font-medium text-gray-700">Payment provider</label>
-                                <select name="payment_provider" class="w-full rounded-xl border-gray-300">
-                                    <option value="none" @selected(old('payment_provider', 'none') === 'none')>none</option>
-                                    <option value="maib" @selected(old('payment_provider') === 'maib')>maib</option>
-                                    <option value="paynet" @selected(old('payment_provider') === 'paynet')>paynet</option>
-                                </select>
+                                <label class="block mb-2 text-sm font-medium text-gray-700">Procesator de plati</label>
+                                <div class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900">
+                                    MAIB
+                                </div>
                             </div>
 
                             <div>

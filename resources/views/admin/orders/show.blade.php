@@ -41,9 +41,9 @@
 
         $refundRequestLabels = [
             'requested' => 'Trimisa de client',
-            'seller_reviewed' => 'Sellerul a raspuns',
-            'approved' => 'Aprobata',
-            'rejected' => 'Respinsa',
+            'seller_reviewed' => 'Raspuns seller (istoric)',
+            'approved' => 'Aprobata de seller',
+            'rejected' => 'Respinsa de seller',
         ];
 
         $totalGross = (float) $order->items->sum(fn ($item) => (float) ($item->gross_amount ?? ((float) $item->price * (int) $item->qty)));
@@ -260,10 +260,10 @@
                                             @endif
                                             @if($item->refundRequest->seller_response)
                                                 <div class="mt-2 rounded-xl bg-white/70 px-3 py-2">
-                                                    <div class="font-semibold">Raspuns seller</div>
+                                                    <div class="font-semibold">Decizia sellerului</div>
                                                     <div class="mt-1">{{ $item->refundRequest->seller_response }}</div>
                                                     @if($item->refundRequest->seller_recommended_status)
-                                                        <div class="mt-1 text-xs">Recomandare seller: {{ $item->refundRequest->seller_recommended_status }}</div>
+                                                        <div class="mt-1 text-xs">Status aplicat de seller: {{ $item->refundRequest->seller_recommended_status }}</div>
                                                     @endif
                                                 </div>
                                             @endif
@@ -320,33 +320,18 @@
                                         </div>
                                     @endif
 
-                                    @if($item->refundRequest && !in_array($item->refundRequest->status, ['approved', 'rejected'], true))
+                                    @if($item->refundRequest)
                                         <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
-                                            <div class="text-sm font-semibold text-indigo-900">Decizie pe solicitarea clientului</div>
-                                            <div class="mt-3 flex flex-col gap-3">
-                                                <form method="POST" action="{{ route('admin.refund_requests.approve', $item->refundRequest) }}" class="space-y-2">
-                                                    @csrf
-                                                    <select name="target_status" class="w-full rounded-xl border-gray-300 text-sm shadow-sm">
-                                                        <option value="{{ $item->refundRequest->seller_recommended_status ?: $item->refundRequest->target_status }}">
-                                                            {{ ($item->refundRequest->seller_recommended_status ?: $item->refundRequest->target_status) === 'cancelled' ? 'Aproba ca anulare' : 'Aproba ca refund' }}
-                                                        </option>
-                                                        <option value="{{ ($item->refundRequest->seller_recommended_status ?: $item->refundRequest->target_status) === 'cancelled' ? 'refunded' : 'cancelled' }}">
-                                                            {{ (($item->refundRequest->seller_recommended_status ?: $item->refundRequest->target_status) === 'cancelled') ? 'Aproba ca refund' : 'Aproba ca anulare' }}
-                                                        </option>
-                                                    </select>
-                                                    <textarea name="admin_decision_note" rows="3" placeholder="Nota decizie admin" class="w-full rounded-xl border-gray-300 text-sm shadow-sm"></textarea>
-                                                    <button class="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
-                                                        Aproba solicitarea clientului
-                                                    </button>
-                                                </form>
-                                                <form method="POST" action="{{ route('admin.refund_requests.reject', $item->refundRequest) }}" class="space-y-2">
-                                                    @csrf
-                                                    <textarea name="admin_decision_note" rows="3" required placeholder="De ce respingi cererea" class="w-full rounded-xl border-gray-300 text-sm shadow-sm"></textarea>
-                                                    <button class="w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black">
-                                                        Respinge solicitarea
-                                                    </button>
-                                                </form>
-                                            </div>
+                                            <div class="text-sm font-semibold text-indigo-900">Monitorizare refund</div>
+                                            <p class="mt-1 text-sm text-indigo-800">
+                                                In modelul actual, sellerul decide direct daca aproba sau respinge cererea clientului.
+                                                Adminul monitorizeaza istoricul si poate interveni doar exceptional.
+                                            </p>
+                                            @if($item->refundRequest->status === 'requested')
+                                                <div class="mt-3 rounded-xl bg-white/70 px-3 py-3 text-sm text-indigo-900">
+                                                    Cererea asteapta inca decizia sellerului.
+                                                </div>
+                                            @endif
                                         </div>
                                     @endif
                                 </div>

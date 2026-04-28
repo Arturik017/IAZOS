@@ -20,15 +20,11 @@ class SellerApplicationController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'shop_name' => ['required', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
-            'seller_type' => ['required', 'in:individual,freelancer,company'],
-            'idnp' => ['nullable', 'string', 'max:50'],
-            'company_idno' => ['nullable', 'string', 'max:50'],
-            'pickup_address' => ['nullable', 'string', 'max:500'],
+            'company_idno' => ['required', 'string', 'max:50'],
             'delivery_type' => ['required', 'in:courier,personal'],
             'courier_company' => ['nullable', 'string', 'max:255'],
             'courier_contract_details' => ['nullable', 'string', 'max:2000'],
             'notes' => ['nullable', 'string', 'max:3000'],
-            'payment_provider' => ['nullable', 'in:maib,paynet,none'],
             'has_online_payments_enabled' => ['nullable', 'boolean'],
             'merchant_id' => ['nullable', 'string', 'max:255'],
             'terminal_id' => ['nullable', 'string', 'max:255'],
@@ -41,27 +37,19 @@ class SellerApplicationController extends Controller
 
         $data['has_online_payments_enabled'] = $request->boolean('has_online_payments_enabled');
 
-        if (in_array($data['seller_type'], ['individual', 'freelancer'], true)) {
-            $data['company_idno'] = null;
-        }
-
-        if ($data['seller_type'] === 'company') {
-            $data['idnp'] = null;
-        }
-
         if ($data['delivery_type'] === 'personal') {
             $data['courier_company'] = null;
             $data['courier_contract_details'] = null;
         }
 
         if (!$data['has_online_payments_enabled']) {
-            $data['payment_provider'] = 'none';
             $data['merchant_id'] = null;
             $data['terminal_id'] = null;
             $data['api_key'] = null;
             $data['secret_key'] = null;
             $data['payment_contact_email'] = null;
             $data['settlement_iban'] = null;
+            $data['payment_notes'] = null;
         }
 
         $data['status'] = 'pending';

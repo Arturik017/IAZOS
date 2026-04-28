@@ -30,7 +30,6 @@ class ProfileController extends Controller
         }
 
         $paymentAccount = $profile->paymentAccount ?: new SellerPaymentAccount([
-            'provider' => 'none',
             'status' => 'missing',
             'is_active' => false,
             'payment_contact_email' => $user->email,
@@ -63,15 +62,11 @@ class ProfileController extends Controller
             'remove_avatar' => ['nullable', 'boolean'],
             'legal_name' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
-            'pickup_address' => ['nullable', 'string', 'max:500'],
-            'seller_type' => ['required', 'in:individual,company'],
-            'idnp' => ['nullable', 'string', 'max:50'],
-            'company_idno' => ['nullable', 'string', 'max:50'],
+            'company_idno' => ['required', 'string', 'max:50'],
             'delivery_type' => ['nullable', 'in:courier,personal'],
             'courier_company' => ['nullable', 'string', 'max:255'],
             'courier_contract_details' => ['nullable', 'string', 'max:2000'],
             'notes' => ['nullable', 'string', 'max:3000'],
-            'payment_provider' => ['nullable', 'in:maib,paynet,none'],
             'has_online_payments_enabled' => ['nullable', 'boolean'],
             'merchant_id' => ['nullable', 'string', 'max:255'],
             'terminal_id' => ['nullable', 'string', 'max:255'],
@@ -81,14 +76,6 @@ class ProfileController extends Controller
             'settlement_iban' => ['nullable', 'string', 'max:64'],
             'payment_notes' => ['nullable', 'string', 'max:3000'],
         ]);
-
-        if ($data['seller_type'] === 'individual') {
-            $data['company_idno'] = null;
-        }
-
-        if ($data['seller_type'] === 'company') {
-            $data['idnp'] = null;
-        }
 
         if (($data['delivery_type'] ?? null) === 'personal') {
             $data['courier_company'] = null;
@@ -116,7 +103,6 @@ class ProfileController extends Controller
         unset($data['avatar'], $data['remove_avatar']);
 
         $paymentData = [
-            'provider' => $data['payment_provider'] ?? 'none',
             'merchant_id' => $data['merchant_id'] ?? null,
             'terminal_id' => $data['terminal_id'] ?? null,
             'payment_contact_email' => $data['payment_contact_email'] ?? $user->email,
@@ -135,7 +121,6 @@ class ProfileController extends Controller
         }
 
         if (!$request->boolean('has_online_payments_enabled')) {
-            $paymentData['provider'] = 'none';
             $paymentData['merchant_id'] = null;
             $paymentData['terminal_id'] = null;
             $paymentData['payment_contact_email'] = null;
@@ -145,9 +130,7 @@ class ProfileController extends Controller
             $paymentData['secret_key'] = null;
             $paymentStatus = 'missing';
         } else {
-            $hasCorePaymentData = filled($paymentData['provider'])
-                && $paymentData['provider'] !== 'none'
-                && filled($paymentData['merchant_id'])
+            $hasCorePaymentData = filled($paymentData['merchant_id'])
                 && (array_key_exists('api_key', $paymentData) || filled(optional($profile->paymentAccount)->api_key))
                 && (array_key_exists('secret_key', $paymentData) || filled(optional($profile->paymentAccount)->secret_key));
 
@@ -158,7 +141,6 @@ class ProfileController extends Controller
         $paymentData['verified_at'] = null;
 
         unset(
-            $data['payment_provider'],
             $data['has_online_payments_enabled'],
             $data['merchant_id'],
             $data['terminal_id'],

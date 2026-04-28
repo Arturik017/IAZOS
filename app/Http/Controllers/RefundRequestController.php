@@ -15,6 +15,10 @@ class RefundRequestController extends Controller
         abort_unless((int) $order->user_id === (int) auth()->id(), 404);
         abort_unless((int) $item->order_id === (int) $order->id, 404);
 
+        if (($order->payment_status ?? 'unpaid') !== 'paid') {
+            return back()->with('error', 'Poti solicita refund doar pentru o comanda achitata.');
+        }
+
         if ($item->refundRequest) {
             return back()->with('error', 'Exista deja o solicitare de refund pentru acest produs.');
         }
@@ -40,6 +44,6 @@ class RefundRequestController extends Controller
             'client_note' => $data['client_note'] ?? null,
         ]);
 
-        return back()->with('success', 'Solicitarea de refund a fost trimisa. Sellerul si adminul o pot analiza acum.');
+        return back()->with('success', 'Solicitarea de refund a fost trimisa. Sellerul o vede acum si poate decide direct.');
     }
 }

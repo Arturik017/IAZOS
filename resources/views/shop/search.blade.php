@@ -56,12 +56,6 @@
                                         </div>
                                     @endif
 
-                                    @if(!empty($seller->sellerProfile->pickup_address))
-                                        <div class="mt-2 text-sm text-gray-500">
-                                            {{ $seller->sellerProfile->pickup_address }}
-                                        </div>
-                                    @endif
-
                                     @if(!empty($seller->sellerProfile->notes))
                                         <div class="mt-3 text-sm text-gray-600 line-clamp-3">
                                             {{ $seller->sellerProfile->notes }}

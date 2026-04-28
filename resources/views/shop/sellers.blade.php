@@ -185,21 +185,7 @@
                                         {{ $seller->public_products_count }}
                                     </div>
                                 </div>
-
-                                <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                                    <div class="text-xs uppercase tracking-wide text-gray-500">Tip</div>
-                                    <div class="mt-1 text-sm font-bold text-gray-900">
-                                        {{ $profile->seller_type ?: '—' }}
-                                    </div>
-                                </div>
                             </div>
-
-                            @if($profile->pickup_address)
-                                <div class="mt-4 text-sm text-gray-600">
-                                    <span class="font-semibold text-gray-900">Adresa:</span>
-                                    {{ $profile->pickup_address }}
-                                </div>
-                            @endif
 
                             @if($profile->delivery_type)
                                 <div class="mt-2 text-sm text-gray-600">
